@@ -48,7 +48,8 @@ Generating reasoning traces allow the model to induce, track, and update action 
 ```
 pip install -r requirements.txt
 ```
-2. This code uses GPT-3.5 model from OpenAI/ To run you will need an OpenAI API Key. [How To Get Your Own OpenAI API Key](https://medium.com/@lorenzozar/how-to-get-your-own-openai-api-key-f4d44e60c327)
+2. This code uses GPT-3.5 model from OpenAI. To run you will need an OpenAI API Key. [How To Get Your Own OpenAI API Key.](https://medium.com/@lorenzozar/how-to-get-your-own-openai-api-key-f4d44e60c327)
+   
 Save your OpenAI API Key in .env file in the following way:
 ```
 OPENAI_API_KEY=xyz123etc-xyz123etc-xyz123etc... #Replace with your key
@@ -66,24 +67,28 @@ Make a bowl of fruits
 **LLM Response:**
 First, I need to check what objects are available in the scene to see if we have fruits and a bowl. Then, I need to determine the sequence of objects the user pointed to or fixated on to understand the order in which they want the fruits placed in the bowl.
 
-**Action:** get_object_list
-**Action Input:** "scene"
+**Action:** get_object_list\
+**Action Input:** "scene"\
 **observation**=['Pringles', 'Coffee', 'Cheez it cracker box', 'Sugar', 'Tomato soup', 'Mustard', 'Jello pudding', 'Jello', 'Spam', 'Banana', 'Apple', 'Lemon', 'Peach', 'Pear', 'Orange', 'Plum', 'Soft scrub', 'Windex', 'Bowl', 'Mug', 'Plate']
 
 I see that we have fruits (Banana, Apple, Lemon, Peach, Pear, Orange, Plum) and a Bowl in the scene.
 
-**Action:** get_pointing_sequence
-**Action Input:** "sequence of objects pointed to"
+
+**Action:** get_pointing_sequence\
+**Action Input:** "sequence of objects pointed to"\
 **observation**=['Bowl']
 
 It seems the user only pointed to the bowl, so they likely want the fruits placed directly into the bowl.
 
-**Action:** pick_object
-**Action Input:** "Banana"
+
+**Action:** pick_object\
+**Action Input:** "Banana"\
 **observation**='You have picked up Banana'
 
-**Action:** place_object
-**Action Input:** "Bowl"
+
+**Action:** place_object\
+**Action Input:** "Bowl"\
 **observation**='You have placed Banana on top of Bowl'
+
 
 **Final Answer:** To make a bowl of fruits, pick up each fruit (Banana, Apple, Lemon, Peach, Pear, Orange, Plum) one by one and place them in the bowl.
