@@ -15,7 +15,8 @@ from typing import Union
 from dotenv import load_dotenv
 from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
+#from langchain_openai import ChatOpenAI
+from langchain_ollama.llms import OllamaLLM
 from langchain.schema import AgentAction, AgentFinish
 from langchain.agents.format_scratchpad import format_log_to_str
 from callbacks import AgentCallbackHandler
@@ -73,7 +74,8 @@ def main():
         tools=render_text_description(tools),
         tool_names=", ".join([t.name for t in tools]),
     )
-    llm = ChatOpenAI(
+    llm = OllamaLLM(
+        model="llama3.2:1b",
         temperature=0,
         stop=["\nObservation", "Observation"],
         callbacks=[AgentCallbackHandler()],

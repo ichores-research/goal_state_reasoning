@@ -1,0 +1,12 @@
+version: '2.4'
+services:
+  langchain_app:
+    image: langchain_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../ReAct:/root/ReAct
+    ports:
+      - "11434:11434"
+    tty: true
