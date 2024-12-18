@@ -1,0 +1,95 @@
+FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	ca-certificates \
+	python3-dev \
+	git \
+	wget \
+	sudo \
+   vim \
+	curl \
+	ninja-build \ 
+   libssl-dev \
+   libbz2-dev \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install python 3.12
+RUN cd tmp &&\
+   wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz && \
+   tar -xf Python-3.12.0.tgz && \
+   cd Python-3.12.*/ && \
+   ./configure --enable-optimizations && \
+   make -j 4 && \
+   make altinstall
+
+RUN sudo update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.12 2
+
+RUN wget https://bootstrap.pypa.io/get-pip.py && \
+	python3 get-pip.py "pip<24.1" && \
+	rm get-pip.py
+
+# add the keys
+RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu focal main" > /etc/apt/sources.list.d/ros-latest.list'
+RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+
+# install ros
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    ros-noetic-desktop-full \
+    ros-noetic-catkin \
+    ros-noetic-vision-msgs \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+SHELL ["/bin/bash", "-c"]
+RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+
+# install python dependencies
+# something breaks here, so we need to reinstall importlib_metadata
+RUN apt-get update
+
+RUN pip uninstall importlib_metadata -y && pip install importlib_metadata --force-reinstall
+# RUN pip install catkin_pkg
+# RUN pip install \
+#     git+https://github.com/qboticslabs/ros_numpy.git \
+RUN pip install rosdep pycryptodomex gnupg
+RUN apt-get install -y --no-install-recommends \
+    python3-rosdep \
+    python3-rosinstall \
+    python3-rosinstall-generator \
+    python3-wstool \
+    build-essential \
+    python3-rosdep \
+    python3-empy \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# catkin tools
+
+RUN pip install catkin-tools empy
+RUN apt-get update && apt-get install -y lsb-release && apt-get clean all
+RUN sudo rosdep init
+RUN rosdep update
+RUN mkdir -p /root/catkin_ws/src
+RUN /bin/bash -c  '. /opt/ros/noetic/setup.bash'
+
+
+# install langchain dependencies
+RUN pip install \
+langchain \
+langchain-community \
+langchain-core \
+langchainhub \
+langsmith \
+langchain-ollama 
+
+
+## Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+RUN ollama serve &  
+CMD ollama pull llama3:70b & while true; do sleep 10; done 
+
+WORKDIR /root/ReAct

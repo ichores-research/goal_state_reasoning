@@ -4,10 +4,13 @@ services:
     image: langchain_app
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: dockerfile_ros
     volumes:
       - ../ReAct:/root/ReAct
     ports:
       - "11434:11434"
     tty: true
     network_mode: "host"
+    environment: 
+          - ROS_MASTER_URI=${ROS_MASTER_URI:-http://127.0.0.1:11311}
+          - ROS_IP=${ROS_IP:-127.0.0.1}
