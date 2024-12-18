@@ -17,6 +17,7 @@ from langchain.agents.output_parsers.react_single_input import ReActSingleInputO
 from langchain_core.prompts import PromptTemplate
 #from langchain_openai import ChatOpenAI
 from langchain_ollama.llms import OllamaLLM
+from langchain_community.llms import VLLM
 from langchain.schema import AgentAction, AgentFinish
 from langchain.agents.format_scratchpad import format_log_to_str
 from callbacks import AgentCallbackHandler
@@ -66,8 +67,7 @@ def main():
     """
 
     #tools available for LLM
-    seed = random.randint(0,100)
-    random.seed(seed) #set seed for the tools to return eg. the same scene for ths execution
+    random.seed(42) #set seed for the tools to return eg. the same scene for ths execution
     tools = TOOL_LIST
 
     prompt = PromptTemplate.from_template(template=template).partial(
@@ -75,12 +75,14 @@ def main():
         tool_names=", ".join([t.name for t in tools]),
     )
     llm = OllamaLLM(
-        model="llama3.2:1b",
+        model="llama3:70b",
         temperature=0,
         stop=["\nObservation", "Observation"],
         callbacks=[AgentCallbackHandler()],
+        device="cuda"
     )
-    
+
+
     # llm agent
     agent = (
         {

@@ -20,6 +20,8 @@ from typing import List
 import random
 
 
+random.seed(42)
+
 YCB_OBJECTS = [
     'Pringles', 'Coffee', 'Cheez it cracker box', 'Sugar', 'Tomato soup', 'Mustard',
     'Jello pudding', 'Jello', 'Spam', 'Banana', 'Apple', 'Lemon', 'Peach', 'Pear', 
@@ -101,6 +103,10 @@ def release_picked_object(text: str) -> str:
         PICKED_OBJECT = ""
         return result
 
+@tool
+def none_tool_err(text: str) -> str:
+    """Returns list of avaibale tools when tool is not found"""
+    return f"Tool with name None not found. Available tools: {TOOL_LIST}"
 
 # Tool List
 TOOL_LIST = [
@@ -109,11 +115,14 @@ TOOL_LIST = [
     get_head_fixations,
     pick_object,
     place_object,
-    release_picked_object
+    release_picked_object,
+    none_tool_err
 ]
 
 # Function to find a tool by name
 def find_tool_by_name(tool_name: str) -> Tool:
+    if tool_name is None:
+        return none_tool_err
     for tool in TOOL_LIST:
         if tool.name == tool_name:
             return tool

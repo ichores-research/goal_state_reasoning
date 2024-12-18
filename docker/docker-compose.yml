@@ -4,9 +4,10 @@ services:
     image: langchain_app
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     volumes:
       - ../ReAct:/root/ReAct
     ports:
       - "11434:11434"
     tty: true
+    network_mode: "host"

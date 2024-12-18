@@ -1,0 +1,51 @@
+FROM mzahana/ros-noetic-cuda11.4.2
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+	ca-certificates \
+	python3-dev \
+	git \
+	wget \
+	sudo \
+    vim \
+	curl \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install python 3.12
+RUN cd tmp &&\
+wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz && \
+tar -xf Python-3.12.0.tgz && \
+cd Python-3.12.*/ && \
+./configure --enable-optimizations && \
+make -j 4 && \
+make altinstall
+
+RUN sudo update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.12 2
+#RUN ln -sv /usr/bin/python3 /usr/bin/python
+
+RUN wget https://bootstrap.pypa.io/get-pip.py && \
+	python3 get-pip.py "pip<24.1" && \
+	rm get-pip.py
+
+# install langchain dependencies
+RUN pip install \
+langchain \
+langchain-community \
+langchain-core \
+langchainhub \
+langsmith \
+langchain-ollama 
+
+## VLLM instalation
+# Install Rust via rustup
+# RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# # Set the path for Cargo and Rust
+# ENV PATH="/root/.cargo/bin:${PATH}"
+
+# RUN pip install --upgrade --quiet  vllm -q
+
+## Alternative: Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+RUN ollama pull llama3:70b
