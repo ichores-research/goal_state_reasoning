@@ -44,22 +44,20 @@ Generating reasoning traces allow the model to induce, track, and update action 
 
 
 ## How to run
-1. Install required packedges
+
 ```
-pip install -r requirements.txt
-```
-2. This code uses GPT-3.5 model from OpenAI. To run you will need an OpenAI API Key. [How To Get Your Own OpenAI API Key.](https://medium.com/@lorenzozar/how-to-get-your-own-openai-api-key-f4d44e60c327)
-   
-Save your OpenAI API Key in .env file in the following way:
-```
-OPENAI_API_KEY=xyz123etc-xyz123etc-xyz123etc... #Replace with your key
-```
-3. To run 
-```bash
-cd ReAct
-python agent.py <goal state command for the robot>
+cd docker
+ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago.yaml docker-compose up -d
 ```
 
+TBD start with agent 
+```
+# temporary
+docker-compose exec goal_state_reasoning bash
+
+#inside container
+python3 agent.py "command"
+```
 ## Example Result (ReAct)
 **Human:** 
 Make a bowl of fruits

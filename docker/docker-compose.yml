@@ -1,16 +1,31 @@
 version: '2.4'
 services:
-  langchain_app:
-    image: langchain_app
-    build:
+  goal_state_reasoning:
+    image: goal_state_reasoning
+    privileged: true
+    build: 
       context: .
       dockerfile: dockerfile_ros
+    network_mode: "host"
+    runtime: "nvidia"
     volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../ReAct:/root/ReAct
+      - ../../../config:/root/config
+      - "../../../data/datasets:/root/ReAct/datasets:rw"
+    environment:
+      - ROS_MASTER_URI=${ROS_MASTER_URI:-http://127.0.0.1:11311}
+      - ROS_IP=${ROS_IP:-127.0.0.1}
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+      - DATASET=${DATASET}
+      - CONFIG=${CONFIG}
     ports:
       - "11434:11434"
+    command: bash -c "ollama pull llama3:70b &&
+                      source catkin_ws/devel/setup.bash;
+                      rosparam load /root/config/${CONFIG} /pose_estimator;
+                      while true; do sleep 10; done"
+    stdin_open: true
     tty: true
-    network_mode: "host"
-    environment: 
-          - ROS_MASTER_URI=${ROS_MASTER_URI:-http://127.0.0.1:11311}
-          - ROS_IP=${ROS_IP:-127.0.0.1}
