@@ -131,3 +131,6 @@ dmypy.json
 
 # custom logs
 *log
+
+
+.DS_STORE

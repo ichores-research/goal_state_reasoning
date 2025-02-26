@@ -17,47 +17,25 @@ Description:
 
 from langchain.agents import tool, Tool
 from typing import List
-import random
+from ros_comm import robot_execute
+from ros_comm_tasks import Task
 
 
-random.seed(42)
-
-YCB_OBJECTS = [
-    'Pringles', 'Coffee', 'Cheez it cracker box', 'Sugar', 'Tomato soup', 'Mustard',
-    'Jello pudding', 'Jello', 'Spam', 'Banana', 'Apple', 'Lemon', 'Peach', 'Pear', 
-    'Orange', 'Plum', 'Soft scrub', 'Windex', 'Bowl', 'Mug', 'Plate'
-]
-
-PICKED_OBJECT = ""
-
-# Utility function to return a random subset of YCB objects
-def get_random_object_subset() -> List[str]:
-    num_objects = random.randint(1, len(YCB_OBJECTS))
-    return random.sample(YCB_OBJECTS, num_objects)
-
+PICKED_OBJECT = None
 
 
 # Tool Definitions
 @tool
 def get_object_list(text:str) -> List[str]:
     """Returns a list of objects that are visible in the scene"""
-    return get_random_object_subset()
+    return robot_execute(Task.GET_OBJECT_NAMES.value, "")
 
 
 @tool
 def get_pointing_sequence(text:str) -> tuple:
     """Returns a sequence of objects that the user pointed to with their hand while issuing a command"""
-    return tuple(get_random_object_subset())
+    return tuple()
 
-
-
-@tool
-def get_head_fixations(text:str) -> dict:
-    """Returns a dictionary containing the sequence of objects the user was fixating on,
-    along with the corresponding durations of their gaze on each object"""
-    objects = get_random_object_subset()
-    gaze_durations = {obj: random.uniform(1, 10) for obj in objects}
-    return gaze_durations
 
 
 
@@ -112,7 +90,6 @@ def none_tool_err(text: str) -> str:
 TOOL_LIST = [
     get_object_list, 
     get_pointing_sequence, 
-    get_head_fixations,
     pick_object,
     place_object,
     release_picked_object,

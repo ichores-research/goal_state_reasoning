@@ -11,6 +11,7 @@ Usage: python agent.py <command for robot to execute>
 """
 
 import random
+import threading
 from typing import Union
 from dotenv import load_dotenv
 from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
@@ -24,6 +25,7 @@ from callbacks import AgentCallbackHandler
 from langchain.tools.render import render_text_description
 from tools import find_tool_by_name, TOOL_LIST
 import argparse
+from ros_comm import server
 
 
 def main():
@@ -129,4 +131,6 @@ def main():
 
 
 if __name__ == "__main__":
+    ros_comm_thread = threading.Thread(target=server)
+    ros_comm_thread.start()
     main()
