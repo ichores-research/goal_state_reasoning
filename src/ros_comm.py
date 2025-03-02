@@ -1,83 +1,76 @@
 #!/usr/bin/env python3
-#import rospy
-import socket
-import threading
-import time
-from ros_comm_tasks import Task
-from ros_object_detections import serialize_detections, detect_objects
+import rospy
+import enum
+from object_detector_msgs.srv import detectron2_service_server,  estimate_poses
+from sensor_msgs.msg import Image
+import json
 
-HOST = '127.0.0.1'  # The server's hostname or IP address
-PORT = 65432        # The port used by the server
+class Task(enum.Enum):
+    GET_OBJECT_NAMES = "get_object_names"
+    GET_OBJECT_POSE = "get_object_pose"
+    GET_POINTING_SEQUENCE = "get_pointing_sequence"
+    PICK_OBJECT = "pick_object"
+    PLACE_OBJECT = "place_object"
+    RELEASE_PICKED_OBJECT = "release_picked_object"
 
-def server():
-    """Single-threaded socket server for ROS communication."""
-    # rospy.init_node("LLM_agent")
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((HOST, PORT))
-        s.listen()
-        print(f"ROS Communication Server listening on {HOST}:{PORT}")
+def detect_objects(rgb=None):
+    if rgb is None:
+        rgb = rospy.wait_for_message(rospy.get_param('/pose_estimator/color_topic'), Image)
+    rospy.wait_for_service('detect_objects')
+    try:
+        detect_objects_service = rospy.ServiceProxy('detect_objects', detectron2_service_server)
+        response = detect_objects_service(rgb)
+        return response.detections.detections
+    except rospy.ServiceException as e:
+        print("Service call failed: %s" % e)
+        return None
 
-        while True:
-            conn, addr = s.accept()
-            print(f"Connected by {addr}")
 
-            with conn:
-                while True:  # Keep connection open for multiple messages
-                    try:
-                        print("Waiting for data...")
-                        data = conn.recv(1024).decode().strip()
-
-                        if not data:
-                            print(f"Client {addr} disconnected.")
-                            break  # wait for client to send message
-
-                        print(f"Received: {data}")
-                        response = process_task(data)
-                        conn.sendall(response.encode())
-
-                    except ConnectionResetError:
-                        print(f"Connection lost with {addr}. Waiting for a new connection...")
-                        break  # Exit inner loop and accept new client
-
-                    time.sleep(0.5)
-                    # rate.sleep()
-
-def process_task(data):
-    """Processes incoming tasks and returns appropriate responses."""
-    parts = data.split(":", 1)  # Split into task and data
+def estimate_object_pose(rgb, depth, detection):
     
-    if len(parts) != 2:
-        return "Invalid message format"
+    rospy.wait_for_service('estimate_poses')
     
-    task, payload = parts
-    response = ""
+    try:
+        estimate_poses_service = rospy.ServiceProxy('estimate_poses', estimate_poses)
+        response = estimate_poses_service(detection, rgb, depth)
+        return response.poses
+    except rospy.ServiceException as e:
+        print("Service call failed: %s" % e)
 
+def object_pose_estimation(object_name):
+    rgb = rospy.wait_for_message(rospy.get_param('/pose_estimator/color_topic'), Image)
+    depth = rospy.wait_for_message(rospy.get_param('/pose_estimator/depth_topic'), Image)
+    detections = detect_objects(rgb)
+
+    if detections is None or len(detections) == 0:
+        return "Nothing detected"
+    else:
+
+        estimated_pose_camFrame = None
+
+        try:
+            for detection in detections:
+                if detection.name == object_name:
+                    estimated_pose_camFrame = estimate_object_pose(rgb, depth, detection)[0]
+                    break
+                
+        except Exception as e:
+            rospy.logerr(f"{e}")
+            return "Pose estimation failed"
+        return estimated_pose_camFrame
+
+
+def robot_execute(task, message=None):
     if task == Task.GET_OBJECT_NAMES.value: 
-        response = serialize_detections(detect_objects())
-    elif task == Task.GET_OBJECTS.value:
-        response = "Mock object list"
+        detections = detect_objects()
+        response = [detection.name for detection in detections]
+    elif task == Task.GET_OBJECT_POSE.value:
+        object_name = message
+        response = object_pose_estimation(object_name)
+         
     else:
         response = "Unknown task"
 
     return response
 
-def robot_execute(task, message):
-    """Client function to send a request and receive response."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.connect((HOST, PORT))
-            full_message = f"{task}:{message}"
-            s.sendall(full_message.encode())
-            data = s.recv(1024).decode()
-            return data
-        except ConnectionError:
-            return "Connection to server failed"
-
-
-if __name__ == "__main__":
-    ros_comm_thread = threading.Thread(target=server)
-    ros_comm_thread.daemon = True # Allow the program to exit even if this thread is running.
-    ros_comm_thread.start()
-    time.sleep(1) # Give the server a moment to start.
-    print(robot_execute(Task.GET_OBJECTS.value, ""))

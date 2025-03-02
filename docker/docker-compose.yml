@@ -11,9 +11,9 @@ services:
     volumes:
       - /dev/bus/usb:/dev/bus/usb
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ../ReAct:/root/ReAct
-      - ../../../config:/root/config
-      - "../../../data/datasets:/root/ReAct/datasets:rw"
+      - ../src:/root/goal_state_reasoning
+      - ../config:/root/config
+      - "../../../data/datasets:/root/goal_state_reasoning/datasets:rw"
     environment:
       - ROS_MASTER_URI=${ROS_MASTER_URI:-http://127.0.0.1:11311}
       - ROS_IP=${ROS_IP:-127.0.0.1}
