@@ -47,7 +47,7 @@ Generating reasoning traces allow the model to induce, track, and update action 
 
 ```
 cd docker
-ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago.yaml docker-compose up -d
+ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago_cracow.yaml docker-compose up -d
 ```
 
 TBD start with agent 
