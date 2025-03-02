@@ -71,19 +71,19 @@ RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; cd /root/catkin_ws; catkin build
 
 
 
-
-# Install python 3.12 for langchain
-RUN cd tmp &&\
-   wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz && \
-   tar -xf Python-3.12.0.tgz && \
-   cd Python-3.12.*/ && \
-   ./configure --enable-optimizations && \
-   make -j 4 && \
-   make altinstall
+#not needed?
+# # Install python 3.12 for langchain
+# RUN cd tmp &&\
+#    wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz && \
+#    tar -xf Python-3.12.0.tgz && \
+#    cd Python-3.12.*/ && \
+#    ./configure --enable-optimizations && \
+#    make -j 4 && \
+#    make altinstall
 
 
 # install langchain dependencies
-RUN python3.12 -m pip install \
+RUN python3 -m pip install \
 python-dotenv \
 langchain \
 langchain-community \
