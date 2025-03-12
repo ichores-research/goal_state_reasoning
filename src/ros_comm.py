@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import time
 import rospy
 import enum
 from object_detector_msgs.srv import detectron2_service_server,  estimate_poses
@@ -74,3 +75,17 @@ def robot_execute(task, message=None):
 
     return response
 
+if __name__ == "__main__":
+    rospy.init_node('object_detection_node')
+    #time.sleep(10)
+    rate = rospy.Rate(200)
+    try:
+        while not rospy.is_shutdown():
+            detections = detect_objects()
+            for detection in detections:
+                print(object_pose_estimation(detection.name))
+            rate.sleep()
+    except rospy.ROSInterruptException:
+        pass
+    except KeyboardInterrupt:
+        pass
