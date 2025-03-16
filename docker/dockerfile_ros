@@ -87,7 +87,7 @@ RUN python3 -m pip install \
 python-dotenv \
 langchain \
 langchain-community \
-langchain-core \
+langchain_core \
 langchainhub \
 langsmith \
 langchain-ollama 

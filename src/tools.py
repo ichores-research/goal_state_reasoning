@@ -19,6 +19,7 @@ from langchain.agents import tool, Tool
 from typing import List
 from ros_comm import robot_execute, Task
 
+
 PICKED_OBJECT = None
 
 
@@ -27,15 +28,6 @@ PICKED_OBJECT = None
 def get_object_list(text:str) -> List[str]:
     """Returns a list of objects that are visible in the scene"""
     return robot_execute(Task.GET_OBJECT_NAMES.value, "")
-
-
-# @tool
-# def get_pointing_sequence(text:str) -> tuple:
-#     """Returns a sequence of objects that the user pointed to with their hand while issuing a command"""
-#     return tuple()
-
-
-
 
 @tool
 def pick_object(object_name:str) -> str:
@@ -47,10 +39,11 @@ def pick_object(object_name:str) -> str:
     if PICKED_OBJECT is not None:
         return f'Your robotic arm is busy holding {PICKED_OBJECT}'
     else:
-        PICKED_OBJECT = object_name
-        return f'You have picked up {object_name}'
-    # else:
-    #     return f'You cannot pick {object_name}, try again or do somethig else.'
+        try:
+            PICKED_OBJECT = object_name
+            return f'You have picked up {object_name}'
+        except:
+            return f'You cannot pick {object_name}. Try again or do somethig else.'
     
 
 @tool 
@@ -58,30 +51,19 @@ def get_object_position(object_name:str) -> dict:
     """Get the position and orientation of the object in the scene"""
     return robot_execute(Task.GET_OBJECT_POSE.value, object_name)
 
-# @tool
-# def place_object(target_object_name:str) -> str:
-#     """Place the picked up object on top of target object"""
-#     global PICKED_OBJECT
-#     target_object_name = target_object_name.strip()
-#     available_objects = get_object_list("")
-
-#     if any(target_object_name.lower() in item.lower() for item in available_objects):
-#         result = f'You have placed {PICKED_OBJECT} on top of {target_object_name}'
-#         PICKED_OBJECT = None
-#         return result
-#     else:
-#         return f'You cannot place {PICKED_OBJECT} on top of {target_object_name}'
-
 
 @tool
-def place_object(x:float, y:float, z:float) -> str:
-    """ Place the picked up object in a specific position. Before using this tool get positions of objects in the scene."""
+def place_object(where: str) -> str:
+    """ Place the picked up object in a specific position. 
+    `where` argument should describe the target position, eg. to the left of the mug, near the apple, etc."""
+
     global PICKED_OBJECT
-
-    result = f'You have placed {PICKED_OBJECT} at position ({x}, {y}, {z})'
-    PICKED_OBJECT = None
-    return result
-
+    try:
+        result = f'You have placed {PICKED_OBJECT} {where}'
+        PICKED_OBJECT = None
+        return result
+    except:
+        return f'You cannot place {PICKED_OBJECT} {where}. Try again or do somethig else.'
 
 @tool
 def release_picked_object(text: str) -> str:
@@ -90,10 +72,18 @@ def release_picked_object(text: str) -> str:
     if PICKED_OBJECT is None:
         return f'You are not holding any objects'
     else:
-        result = f'You have released {PICKED_OBJECT}'
-        PICKED_OBJECT = None
-        return result
+        try:
+            result = f'You have released {PICKED_OBJECT}'
+            PICKED_OBJECT = None
+            return result
+        except:
+            return f'You cannot release {PICKED_OBJECT}. Try again or do somethig else.'
 
+
+# @tool
+# def get_pointing_sequence(text:str) -> tuple:
+#     """Returns a sequence of objects that the user pointed to with their hand while issuing a command"""
+#     return tuple()
 
 
 # Tool List

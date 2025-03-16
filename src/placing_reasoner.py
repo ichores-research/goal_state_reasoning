@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Name: placing_reasoner.py
 
@@ -15,7 +16,8 @@ from callbacks import AgentCallbackHandler
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field, field_validator
-
+import rospy
+from ros_comm import robot_execute, Task
 
 # Define your desired data structure.
 class OutputCoords(BaseModel):
@@ -41,32 +43,47 @@ class PlaceReasoner():
         self.template = """
         You are the controller of a Tiago PAL robot with one gripper. 
 
-        The input is represented by 3 components:
-        1. 3D objects located on the table
-        2. One object held by you in the gripper
-        3. A description of what to do with held object.
-        Each object on the table is represented by its name and 3D bounding box.
-        3D bounding box consist of 2 points (x,y,z), top left back and bottom right front corners.
-        The table is described by coordinates of 4 corners. Table for corners represent minimum and maximum coordinate values.
-        The object held by you is described by name and dimentions (max width, max depth, max height)
+        The input is represented by 4 components:
 
-        The output is a point (x,y,z) where the top left back corner of the held object should be released.
+            3D objects located on the table
+            One object held by you in the gripper
+            A description of what to do with held object.
+            Table coordinate limitations
+
+        Each object on the table is represented by its name, position (x,y,z) and diameter.
+        The object held by you is described by name and diameter.
+        The table is represented by four corners. Corners limit possible coordinate values. 
+
+        The output is a point (x,y,z) where the held object should be released.
         The object can only be released on the table.
 
         After we have the output we will use motion planning system to operate the gripper.
 
-        The following are past and conecutive inputs and outputs.
+        The following are example inputs and outputs.
 
         Your output is only one line and starts with "Output:", please do not output other redundant words. 
 
-        Input: {{
-            'objects on the table': [
-                {{'name': 'banana', 'bbox': [[0, 0, 0.5], [2, 1, 0]]}}, 
-                {{'name': 'plate', 'bbox': [[2, 0, 0.3], [4, 2, 0]]}}, 
-                {{'name': 'table', 'bbox': [[-5, -5, 0], [15, 7, 0]]}}], 
-            'object in the gripper': {{'name': 'orange', 'dimentions': [1, 1, 1]}}, 
-            'command': ['place the orange on top of the plate']}}
-        Output: (1.0, 0, -2)
+        Input: {{'objects on the table': [
+        {{'name': '024_bowl', 'position': [-0.33, 0.06, 1.06], 'diameter': 0.16}},
+        {{'name': '011_banana', 'position': [0.29, 0.08, 0.88], 'diameter': 0.2}},
+        {{'name': '006_mustard_bottle', 'position': [0.04, -0.01, 0.99], 'diameter': 0.2}},
+        {{'name': '017_orange', 'position': [-0.04, 0.07, 0.62], 'diameter': 0.07}},
+        ],
+        'object in the gripper': {{'name': '013_apple', 'diameter': 0.08}},
+        'command': 'place apple into the bowl'}}
+        'table corners': {{"left back": [-0.51,0.27,1.77],"right back": [0.5,0.27,1.72],"left front": [-0.48,0.37,1.20],"right front": [0.08,0.1,0.20]}}
+        Output: (-0.19, -0.03, 0.77)
+
+        Input: {{'objects on the table': [
+        {{'name': '011_banana', 'position': [0.39, 0.22, 0.93], 'diameter': 0.2}},
+        {{'name': '017_orange', 'position': [0.31, 0.07, 0.79], 'diameter': 0.07}},
+        {{'name': '014_lemon', 'position': [0.26, 0.19, 0.94], 'diameter': 0.07}},
+        ],
+        'object in the gripper': {{'name': '025_mug', 'diameter': 0.13}},
+        'command': 'place the mug near fruits'}}
+        'table corners': {{"left back": [-0.51,0.27,1.77],"right back": [0.5,0.27,1.72],"left front": [-0.48,0.37,1.20],"right front": [0.08,0.1,0.20]}}
+        }}
+        Output: (0.11, 0.1, 0.82)
 
         Input: {input}
         """
@@ -92,12 +109,16 @@ class PlaceReasoner():
 
 
 if __name__ == "__main__":
+    rospy.init_node('placing_reasoner')
     reasoner = PlaceReasoner(
         OllamaLLM(
-            model="llama3.2:1b",
+            model="llama3:70b",
             temperature=0,
             stop=["\nObservation", "Observation"],
             callbacks=[AgentCallbackHandler()],
             device="cuda"
         ))
-    reasoner.run("{'objects on the table': [{'name': 'bowl', 'bbox': [[0, 0, 1], [1, 1, 0]]}, {'name': 'apple', 'bbox': [[1.5, 0, 1], [2.5, 1, 0]]}, {'name': 'orange', 'bbox': [[3, 0, 1], [4, 1, 0]]}, {'name': 'table', 'bbox': [[-5, -5, 0], [15, 7, 0]]}], 'object in the gripper': {'name': 'banana', 'dimentions': [2, 1, 0.5]}, 'command': ['place banana on top of the bowl']}")
+    input = robot_execute(Task.PLACE_OBJECT.value, "013_apple; near the canned meat")
+    reasoner.run(input)
+
+    
