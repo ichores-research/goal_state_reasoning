@@ -47,6 +47,7 @@ Generating reasoning traces allow the model to induce, track, and update action 
 
 ```
 cd docker
+tiago #this is an alias
 ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago_cracow.yaml docker-compose up -d
 ```
 
@@ -54,6 +55,8 @@ TBD start with agent
 ```
 # temporary
 docker-compose exec goal_state_reasoning bash
+source catkin_ws/devel/setup.bash;
+rosparam load /root/config/${CONFIG} /pose_estimator;
 
 #inside container
 python3 agent.py "command"
