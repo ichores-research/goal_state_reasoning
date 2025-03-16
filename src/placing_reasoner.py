@@ -16,8 +16,31 @@ from callbacks import AgentCallbackHandler
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field, field_validator
+from ros_object_detections import parse_scene_for_placing
 import rospy
 from ros_comm import robot_execute, Task
+
+
+class Singleton(type):
+    """
+    The Singleton class uses metaclass.
+    The singleton metaclass is needed to initialize place reasoner in agent.py
+    But Agent is not able to inject reasoner class in tool call.
+    Therefore tools.py should be able to get preinitialized instancee of PlaceReasoner.
+    """
+
+    instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
 
 # Define your desired data structure.
 class OutputCoords(BaseModel):
@@ -35,9 +58,7 @@ class OutputCoords(BaseModel):
         return field
 
 
-
-
-class PlaceReasoner():
+class PlaceReasoner(metaclass=Singleton):
     def __init__(self, llm):
         
         self.template = """
@@ -100,10 +121,10 @@ class PlaceReasoner():
         # And a query intended to prompt a language model to populate the data structure.
         self.pipe = self.prompt | self.llm
         
-    
-
-    def run(self, input):
-        output = self.pipe.invoke({"input": input})
+    def run(self, object_in_the_gripper, where):
+        input = parse_scene_for_placing(object_in_the_gripper)
+        input["command"] = where
+        output = self.pipe.invoke({"input": str(input)})
         return self.parser.invoke(output)
         
 
@@ -118,6 +139,7 @@ if __name__ == "__main__":
             callbacks=[AgentCallbackHandler()],
             device="cuda"
         ))
+    # Place SPAM canned meat in the scene
     input = robot_execute(Task.PLACE_OBJECT.value, "013_apple; near the canned meat")
     reasoner.run(input)
 

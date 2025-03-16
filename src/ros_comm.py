@@ -25,12 +25,10 @@ def robot_execute(task, message=None):
     elif task == Task.GET_OBJECT_POSES.value:
         object_name = message
         response = get_object_poses()
-    #TODO correct this, dont pass command
     elif task == Task.PLACE_OBJECT.value:
-        object_name, where = message.split(";")
-        scene_info = parse_scene_for_placing(message)
-        scene_info["command"] = f"place {object_name} {where}"
-        response = scene_info
+        coords = tuple(message)
+        #TODO: Implement robot arm movement
+        response = "success"
         
     else:
         response = "Unknown task"

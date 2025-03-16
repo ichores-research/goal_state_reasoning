@@ -17,6 +17,7 @@ from langchain.schema import AgentAction, AgentFinish
 from langchain.agents.format_scratchpad import format_log_to_str
 from callbacks import AgentCallbackHandler
 from langchain.tools.render import render_text_description
+from placing_reasoner import PlaceReasoner
 from tools import find_tool_by_name, TOOL_LIST
 
 class Agent():
@@ -63,6 +64,7 @@ class Agent():
         )
 
 
+
         # llm agent
         self.agent = (
             {
@@ -74,6 +76,8 @@ class Agent():
             | ReActSingleInputOutputParser()
         )
 
+        #Singleton initialization
+        PlaceReasoner(self.llm)
 
     def run(self, query):
         intermediate_steps = [] # reasoning steps

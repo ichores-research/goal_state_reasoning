@@ -18,10 +18,10 @@ Description:
 from langchain.agents import tool, Tool
 from typing import List
 from ros_comm import robot_execute, Task
+from placing_reasoner import PlaceReasoner
 
 
 PICKED_OBJECT = None
-
 
 # Tool Definitions
 @tool
@@ -59,6 +59,11 @@ def place_object(where: str) -> str:
 
     global PICKED_OBJECT
     try:
+        #PlaceReasoner is a singleton class preinitialized in agent.py
+        #Uses the same llm object as agent.py
+        place_reasoner = PlaceReasoner()
+        placing_coords = place_reasoner.run(PICKED_OBJECT, where)
+        robot_execute(Task.PLACE_OBJECT.value, f"{placing_coords}")
         result = f'You have placed {PICKED_OBJECT} {where}'
         PICKED_OBJECT = None
         return result
