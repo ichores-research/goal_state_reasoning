@@ -24,7 +24,7 @@ if __name__ == "__main__":
         
         #table
         limitations = table_heuristic(objects, models_info, table_size = 1)
-        table = create_table(limitations)
+        #table = create_table(limitations)
         
         for obj in objects:
             
@@ -38,7 +38,7 @@ if __name__ == "__main__":
                 obj["pose"]["orientation"]["y"], 
                 obj["pose"]["orientation"]["z"], 
                 obj["pose"]["orientation"]["w"])
-            ply_file = f"obj_{str(model_id).zfill(6)}.ply"
+            ply_file = f"../../data/datasets/ycb_ichores/models/obj_{str(model_id).zfill(6)}.ply"
             
             mesh = load_mesh(ply_file, position, orientation)
             bbox = get_oriented_bounding_box(mesh)
@@ -48,7 +48,8 @@ if __name__ == "__main__":
         
         
 
-        o3d.visualization.draw_geometries(bboxes + meshes +[table, axes] , window_name=f"Scene Task {scene['command']}")
+        o3d.visualization.draw_geometries( meshes , window_name=f"Scene Task {scene['command']}", width=800, height=600)
+        
      
         target_model_id = name_to_id[scene["correct_answer"]["name"]]
         target_position = (
@@ -60,7 +61,7 @@ if __name__ == "__main__":
                 scene["correct_answer"]["pose"]["orientation"]["y"], 
                 scene["correct_answer"]["pose"]["orientation"]["z"], 
                 scene["correct_answer"]["pose"]["orientation"]["w"])
-        target_ply_file = f"obj_{str(model_id).zfill(6)}.ply"
+        target_ply_file = f"../../data/datasets/ycb_ichores/models/obj_{str(target_model_id).zfill(6)}.ply"
         target_mesh = load_mesh(target_ply_file, target_position, target_orientation)
         target_bbox = get_oriented_bounding_box(target_mesh)
-        o3d.visualization.draw_geometries(bboxes + meshes + [target_mesh, target_bbox, axes] +[table] , window_name="Scene Correct Answer")
+        o3d.visualization.draw_geometries( meshes + [target_mesh]  , window_name=f"Scene {scene['command']} LLama3.3:70b Answer", width=800, height=600)

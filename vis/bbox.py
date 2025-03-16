@@ -97,6 +97,14 @@ def load_mesh(ply_file, position, orientation, scale=0.5):
     mesh.rotate(rotation_matrix, center=center)
     mesh.translate(position)
     mesh.scale(scale, center=center)
+
+    model_id = int(ply_file[-10:-4])
+    model_name = names[model_id]
+    if model_name == "011_banana" or model_name == "006_mustard_bottle" or model_name == "014_lemon":
+        mesh.paint_uniform_color([1, 1, 0])
+    elif model_name == "017_orange":
+        mesh.paint_uniform_color([1, 0.5, 0])
+    
     return mesh
 
 
@@ -151,7 +159,7 @@ if __name__ == "__main__":
     orientation = np.array([float(x) for x in args.orientation.split(",")])
 
     model_id = name_to_id[model_name]
-    ply_file = f"obj_{str(model_id).zfill(6)}.ply"
+    ply_file = f"../../data/datasets/ycb_ichores/models/obj_{str(model_id).zfill(6)}.ply"
     
     
     visualize_model_with_bbox(model_id, ply_file, position, orientation)
