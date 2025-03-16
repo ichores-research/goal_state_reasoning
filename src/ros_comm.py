@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+import os
 import time
 import rospy
 import enum
 from object_detector_msgs.srv import detectron2_service_server,  estimate_poses
 from sensor_msgs.msg import Image
-import json
+
+from ycb_objects import get_ycb_objects_info
 
 class Task(enum.Enum):
     GET_OBJECT_NAMES = "get_object_names"
@@ -14,6 +16,8 @@ class Task(enum.Enum):
     PLACE_OBJECT = "place_object"
     RELEASE_PICKED_OBJECT = "release_picked_object"
 
+DATASET = os.environ.get("DATASET", "ycb_ichores")
+OBJECT_INFO = get_ycb_objects_info(DATASET)
 
 def detect_objects(rgb=None):
     if rgb is None:
