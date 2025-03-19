@@ -27,6 +27,8 @@ PICKED_OBJECT = None
 @tool
 def get_object_list(text:str) -> List[str]:
     """Returns a list of objects that are visible in the scene"""
+    if os.environ.get("TEST_RUN") == "TRUE":
+        return ["apple", "banana", "orange", "mug", "bowl"]
     return robot_execute(Task.GET_OBJECT_NAMES.value, "")
 
 @tool
