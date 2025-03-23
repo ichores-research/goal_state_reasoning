@@ -18,5 +18,5 @@ def get_ycb_objects_info(dataset):
         # this info is based on taks/ scripts from ichores pipeline
         diameters = { int(model_id) : round( models_info[model_id]["diameter"] / 1000 , 2) for model_id in models_info}
 
-    objects_info = [{"name" : k, "diameter": diameters[k] } for k in id_to_name ]
+    objects_info = { name  : {"id" : id, "diameter": diameters[id] } for name, id in name_to_id.items()}
     return objects_info

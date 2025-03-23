@@ -17,6 +17,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import AIMessage
 if os.environ.get("TEST_RUN") != "TRUE":
     try:
+        import rospy
         from ros_object_detections import parse_scene_for_placing
     except ImportError:
         pass
@@ -75,8 +76,6 @@ class PlaceReasoner(metaclass=Singleton):
 
         The following are example inputs and outputs.
 
-        Your output is only one line and starts with "Output:", please do not output other redundant words. 
-
         Input: {{'objects on the table': [
         {{'name': '029_plate', 'position': [0.07, 0.35, 1.45], 'diameter': 0.26}},
         {{'name': '011_banana', 'position': [0.06, 0.3, 1.55], 'diameter': 0.2}},
@@ -109,6 +108,7 @@ class PlaceReasoner(metaclass=Singleton):
         }}
         Output: (-0.19, 0.34, 1.31)
 
+        Your output is only one line and starts with "Output:", please do not output other redundant words. 
         Input: {input}
         """
 
@@ -123,15 +123,15 @@ class PlaceReasoner(metaclass=Singleton):
         self.pipe = self.prompt | self.llm | self.coords_validation
     
     def coords_validation(self, ai_message: AIMessage):
-        if ai_message.content[:7] != "Output:":
+        if ai_message[:7] != "Output:":
             raise ValueError("Badly formed answer. Please start with 'Output:'")
         try:
-            output = ai_message.content[7:].strip()
+            output = ai_message[7:].strip()
             return output
         except ValueError:
             raise ValueError("Badly formed answer. Please provide coordinates as a tuple (x,y,z)")
         finally:
-            return ai_message.content
+            return ai_message
 
     def run(self, object_in_the_gripper, where):
         if os.environ.get("TEST_RUN") == "TRUE":
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     {{'name': '029_plate', 'position': [0.06, 0.34, 1.39], 'diameter': 0.26}},
     ],
     'object in the gripper': {{'name': '011_banana', 'diameter': 0.2}},
-    'command': 'place the banana on the plate'}},
+    'command': 'on the 029_plate'}},
     'table corners': {{'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}}
     }}"""
     reasoner.pipe.invoke({"input": str(input)})

@@ -57,28 +57,22 @@ def get_object_pose(object_name):
         return estimated_pose_camFrame
 
 def get_object_poses():
-    object_poses = []
     detections = detect_objects()
-    for detection in detections:
-        #TODO cretae dict
-        #TypeError: 'PoseWithConfidence' object is not subscriptable
-        object_poses.append(get_object_pose(detection.name)) 
-    return object_poses
+    return [get_object_pose(det.name) for det in detections]
 
 def parse_scene_for_placing(object_in_the_gripper=None):
     scene = {}
     obj_poses = get_object_poses()
-    print(obj_poses)
     scene['objects on the table'] = []
     for obj in obj_poses:
         scene['objects on the table'].append(
         { 
-            'name': obj["name"],
-            'position': [round(obj["pose"]["position"]["x"] , 2), 
-                         round(obj["pose"]["position"]["y"] , 2), 
-                         round(obj["pose"]["position"]["z"] , 2)
+            'name': obj.name,
+            'position': [round(obj.pose.position.x , 2), 
+                         round(obj.pose.position.y , 2), 
+                         round(obj.pose.position.z , 2)
                         ],
-            'diameter': OBJECT_INFO[obj["name"]]['diameter']
+            'diameter': OBJECT_INFO[obj.name]['diameter']
         })
         scene['table limitations'] = TABLE_HEURISTIC
         if object_in_the_gripper is not None:

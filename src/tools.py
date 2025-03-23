@@ -75,7 +75,6 @@ def place_object(where: str) -> str:
         #Uses the same llm object as agent.py
         place_reasoner = PlaceReasoner()
         placing_coords = place_reasoner.run(PICKED_OBJECT, where)
-        print(placing_coords)
         if os.environ.get("TEST_RUN") != "TRUE":
             robot_execute(Task.PLACE_OBJECT.value, f"{placing_coords}")
         result = f'You have placed {PICKED_OBJECT} {where}'
@@ -83,7 +82,7 @@ def place_object(where: str) -> str:
         return result
     except BaseException as e:
         print(e)
-        return f'You cannot place {PICKED_OBJECT} {where}. Try again or do somethig else.'
+        return f'You cannot place {PICKED_OBJECT} {where}. {e} Try again or do somethig else.'
 
 @tool
 def release_picked_object(text: str) -> str:
