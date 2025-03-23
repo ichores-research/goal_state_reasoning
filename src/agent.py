@@ -8,10 +8,16 @@ Description:
 
 """
 
+import os
 from typing import Union
 from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
 from langchain_core.prompts import PromptTemplate
-#from langchain_openai import ChatOpenAI
+try:
+    from langchain_openai import ChatOpenAI
+    import dotenv
+    dotenv.load_dotenv()
+except:
+    pass
 from langchain_ollama.llms import OllamaLLM
 from langchain.schema import AgentAction, AgentFinish
 from langchain.agents.format_scratchpad import format_log_to_str
@@ -55,13 +61,21 @@ class Agent():
             tools=render_text_description(self.tools),
             tool_names=", ".join([t.name for t in self.tools]),
         )
-        self.llm = OllamaLLM(
-            model="llama3:70b",
-            temperature=0,
-            stop=["\nObservation", "Observation"],
-            callbacks=[AgentCallbackHandler()],
-            device="cuda"
-        )
+        if os.environ.get("TEST_RUN") == "TRUE":
+            self.llm = ChatOpenAI(
+                model="gpt-4o-mini",
+                temperature=0,
+                stop=["\nObservation", "Observation"],
+                callbacks=[AgentCallbackHandler()],
+            )
+        else:
+            self.llm = OllamaLLM(
+                model="llama3:70b",
+                temperature=0,
+                stop=["\nObservation", "Observation"],
+                callbacks=[AgentCallbackHandler()],
+                device="cuda"
+            )
 
 
 

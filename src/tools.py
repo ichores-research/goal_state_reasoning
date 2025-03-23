@@ -15,9 +15,14 @@ Description:
 
 """
 
+import os
 from langchain.agents import tool, Tool
 from typing import List
-from ros_comm import robot_execute, Task
+if os.environ.get("TEST_RUN") != "TRUE":
+    try:
+        from ros_comm import robot_execute, Task
+    except ImportError:
+        pass
 from placing_reasoner import PlaceReasoner
 
 
@@ -28,7 +33,10 @@ PICKED_OBJECT = None
 def get_object_list(text:str) -> List[str]:
     """Returns a list of objects that are visible in the scene"""
     if os.environ.get("TEST_RUN") == "TRUE":
-        return ["apple", "banana", "orange", "mug", "bowl"]
+        obj_list = ["010_potted_meat_can", "029_plate", "011_banana"]
+        if PICKED_OBJECT is not None:
+            obj_list.remove(PICKED_OBJECT) 
+        return obj_list
     return robot_execute(Task.GET_OBJECT_NAMES.value, "")
 
 @tool
@@ -40,6 +48,8 @@ def pick_object(object_name:str) -> str:
 
     if PICKED_OBJECT is not None:
         return f'Your robotic arm is busy holding {PICKED_OBJECT}'
+    elif object_name not in available_objects:
+        return f'{object_name} is not available in the scene.'
     else:
         try:
             PICKED_OBJECT = object_name
@@ -65,11 +75,14 @@ def place_object(where: str) -> str:
         #Uses the same llm object as agent.py
         place_reasoner = PlaceReasoner()
         placing_coords = place_reasoner.run(PICKED_OBJECT, where)
-        robot_execute(Task.PLACE_OBJECT.value, f"{placing_coords}")
+        print(placing_coords)
+        if os.environ.get("TEST_RUN") != "TRUE":
+            robot_execute(Task.PLACE_OBJECT.value, f"{placing_coords}")
         result = f'You have placed {PICKED_OBJECT} {where}'
         PICKED_OBJECT = None
         return result
-    except:
+    except BaseException as e:
+        print(e)
         return f'You cannot place {PICKED_OBJECT} {where}. Try again or do somethig else.'
 
 @tool
@@ -96,11 +109,12 @@ def release_picked_object(text: str) -> str:
 # Tool List
 TOOL_LIST = [
     get_object_list, 
-    #get_pointing_sequence, 
     pick_object,
     place_object,
     release_picked_object
 ]
+if os.environ.get("TEST_RUN") != "TRUE": 
+    TOOL_LIST.extend([get_object_position])
 
 # Function to find a tool by namewhen tool is not found
 def find_tool_by_name(tool_name: str) -> Tool:

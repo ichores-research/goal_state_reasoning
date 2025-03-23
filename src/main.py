@@ -2,15 +2,13 @@
 import argparse
 import os
 from agent import Agent
-import rospy
-from ros_comm import robot_execute, Task
 
 def main():
    
     # get query from command line arg
     parser = argparse.ArgumentParser()
     parser.add_argument("query", type=str, help="Query for the ReAct Agent", default="make a bowl of fruits")
-    parser.add_argument("test_run", action='store_true')
+    parser.add_argument("--test_run", action='store_true')
     args = parser.parse_args()
     query = args.query
 
@@ -18,6 +16,7 @@ def main():
     agent = Agent()
 
     if not args.test_run:
+        import rospy
         rospy.init_node("LLM_agent")
     else:
         os.environ["TEST_RUN"] = "TRUE"

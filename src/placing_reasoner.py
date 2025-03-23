@@ -9,16 +9,24 @@ Description:
 
 """
 
+import os
 from langchain_core.prompts import PromptTemplate
-#from langchain_openai import ChatOpenAI
 from langchain_ollama.llms import OllamaLLM
 from callbacks import AgentCallbackHandler
-from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import AIMessage
-#from ros_object_detections import parse_scene_for_placing
-#import rospy
-#from ros_comm import robot_execute, Task
+if os.environ.get("TEST_RUN") != "TRUE":
+    try:
+        from ros_object_detections import parse_scene_for_placing
+    except ImportError:
+        pass
+if os.environ.get("TEST_RUN") == "TRUE":
+    try:
+        from langchain_openai import ChatOpenAI
+        import dotenv
+        dotenv.load_dotenv()
+    except:
+        pass
 
 
 class Singleton(type):
@@ -115,33 +123,57 @@ class PlaceReasoner(metaclass=Singleton):
         self.pipe = self.prompt | self.llm | self.coords_validation
     
     def coords_validation(self, ai_message: AIMessage):
-        if ai_message[:7] != "Output:":
+        if ai_message.content[:7] != "Output:":
             raise ValueError("Badly formed answer. Please start with 'Output:'")
         try:
-            output = tuple(ai_message[7:].strip())
+            output = ai_message.content[7:].strip()
             return output
         except ValueError:
             raise ValueError("Badly formed answer. Please provide coordinates as a tuple (x,y,z)")
         finally:
-            return ai_message
+            return ai_message.content
 
     def run(self, object_in_the_gripper, where):
-        input = parse_scene_for_placing(object_in_the_gripper)
+        if os.environ.get("TEST_RUN") == "TRUE":
+            input = {}
+            input['objects on the table'] = []
+            input['objects on the table'].append({'name': '010_potted_meat_can', 'position': [0.21, 0.31, 1.5], 'diameter': 0.13})
+            input['objects on the table'].append({'name': '029_plate', 'position': [0.06, 0.34, 1.39], 'diameter': 0.26})
+            input['objects on the table'].append({'name': '011_banana', 'position': [-0.01, 0.2, 1.4], 'diameter': 0.2})
+            input['table corners']= {'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}
+            
+            for obj in input['objects on the table']:
+                if obj['name'] == object_in_the_gripper:
+                    input['objects on the table'].remove(obj)
+                    break
+            input['object in the gripper'] = {'name': object_in_the_gripper, 'diameter': 0.2}
+        else:
+            input = parse_scene_for_placing(object_in_the_gripper)
         input["command"] = where
         output = self.pipe.invoke({"input": str(input)})
-        return self.parser.invoke(output)
+        return output
         
 
 
 if __name__ == "__main__":
-    #rospy.init_node('placing_reasoner')
-    reasoner = PlaceReasoner(
-        OllamaLLM(
-            model="llama3.2:1b",
+    if os.environ.get("TEST_RUN") != "TRUE":
+        rospy.init_node('placing_reasoner')
+    
+        reasoner = PlaceReasoner(
+            OllamaLLM(
+                model="llama3:70b",
+                temperature=0,
+                stop=["\nObservation", "Observation"],
+                callbacks=[AgentCallbackHandler()],
+                device="cuda"
+            ))
+    else:
+        reasoner = PlaceReasoner( 
+            ChatOpenAI(
+            model="gpt-3.5-turbo",
             temperature=0,
             stop=["\nObservation", "Observation"],
             callbacks=[AgentCallbackHandler()],
-            device="cuda"
         ))
     # Place SPAM canned meat in the scene
     #reasoner.run( object_in_the_gripper="013_apple", where="near the canned meat")
@@ -153,7 +185,7 @@ if __name__ == "__main__":
     'command': 'place the banana on the plate'}},
     'table corners': {{'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}}
     }}"""
-    output = reasoner.pipe.invoke({"input": str(input)})
-    print( output)
+    reasoner.pipe.invoke({"input": str(input)})
+
 
     
