@@ -3,7 +3,8 @@ import yaml
 
 # TODO real table estiamtion
 TABLE_HEURISTIC = {
-  "table corners": {"left back": [-0.51,0.27,1.77],"right back": [0.5,0.27,1.72],"left front": [-0.48,0.37,1.20],"right front": [0.08,0.1,0.20]}
+  #"table corners": {"left back": [-0.42,0.1,1.37],"right back": [0.55,0.1,2.11],"left front": [-0.10,0.1,0.21],"right front": [0.38,0.1, 0.8]}
+  "min_x": -0.42, "max_x": 0.55, "min_y": "no limits", "max_y":0.1, "min_z":0.21, "max_z":2.11
 }
 
 def get_ycb_objects_info(dataset):

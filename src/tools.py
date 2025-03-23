@@ -44,6 +44,7 @@ def pick_object(object_name:str) -> str:
     """Pick an object with your robotic arm"""
     global PICKED_OBJECT
     object_name = object_name.strip()
+    object_name = object_name.strip("'")
     available_objects = get_object_list("")
 
     if PICKED_OBJECT is not None:

@@ -31,8 +31,8 @@ class Agent():
         self.template = """
         A user gives you a command to execute. 
         Execute command using pick and place movements. 
-        First think if the command is possible to execute given the objects in the scene. 
-        Answer with a sequence of pick and place movements. 
+        Answer with a sequence of pick and place movements.
+        Think if the command is possible to execute given the objects in the scene.  
         Answer the following questions as best you can.
         You have access to the following tools:
 

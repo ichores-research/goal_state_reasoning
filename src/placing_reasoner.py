@@ -67,7 +67,7 @@ class PlaceReasoner(metaclass=Singleton):
 
         Each object on the table is represented by its name, position (x,y,z) and diameter.
         The object held by you is described by name and diameter.
-        The table is represented by four corners. Corners limit possible coordinate values. 
+        The table is represented by six coordinate values: min_x, max_x, min_y, max_y, min_z, max_z.
 
         The output is a point (x,y,z) where the held object should be released.
         The object can only be released on the table.
@@ -82,33 +82,12 @@ class PlaceReasoner(metaclass=Singleton):
         ],
         'object in the gripper': {{'name': '025_mug', 'diameter': 0.13}},
         'command': 'place the mug to the right of the plate'}},
-        'table corners': {{'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}}
+        'table limitations': {{'min_x': -0.51, 'max_x':0.5, 'min_y': 'no limits', 'max_y':0.5, 'min_z':1.2, 'max_z' : 2.5}}
         }}
         Output: (0.25, 0.31, 1.51)
 
-        Input: {{'objects on the table': [
-        {{'name': '013_apple', 'position': [-0.01, 0.44, 2.45], 'diameter': 0.08}},
-        {{'name': '014_lemon', 'position': [-0.09, 0.29, 1.33], 'diameter': 0.07}},
-        {{'name': '011_banana', 'position': [-0.18, 0.29, 1.49], 'diameter': 0.2}},
-        ],
-        'object in the gripper': {{'name': '025_mug', 'diameter': 0.13}},
-        'command': 'place the mug near the fruits'}},
-        'table corners': {{'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}}
-        }}
-        Output: (0.12, 0.33, 1.32)
-
-        Input: {{'objects on the table': [
-        {{'name': '011_banana', 'position': [0.23, 0.31, 1.3], 'diameter': 0.2}},
-        {{'name': '013_apple', 'position': [0.02, 0.41, 1.97], 'diameter': 0.08}},
-        {{'name': '025_mug', 'position': [-0.12, 0.32, 1.57], 'diameter': 0.13}},
-        ],
-        'object in the gripper': {{'name': '006_mustard_bottle', 'diameter': 0.2}},
-        'command': 'release the mustard bottle'}},
-        'table corners': {{'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}}
-        }}
-        Output: (-0.19, 0.34, 1.31)
-
         Your output is only one line and starts with "Output:", please do not output other redundant words. 
+        The y coordinate cannot be greater than max_y.
         Input: {input}
         """
 
@@ -183,7 +162,7 @@ if __name__ == "__main__":
     ],
     'object in the gripper': {{'name': '011_banana', 'diameter': 0.2}},
     'command': 'on the 029_plate'}},
-    'table corners': {{'left back': [-0.51,0.27,1.77],'right back': [0.5,0.27,1.72],'left front': [-0.48,0.37,1.20],'right front': [0.08,0.1,0.20]}}
+    "table limitations": {{"min_x": -0.42, "max_x": 0.55, "min_y": "no limits", "max_y":0.1, "min_z":0.21, "max_z":2.11}}
     }}"""
     reasoner.pipe.invoke({"input": str(input)})
 
