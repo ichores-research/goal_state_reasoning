@@ -26,6 +26,8 @@ services:
     command: bash -c "ollama pull llama3:70b &&
                       source catkin_ws/devel/setup.bash;
                       rosparam load /root/config/${CONFIG} /pose_estimator;
-                      while true; do sleep 10; done"
+                      cd goal_state_reasoning;
+                      while true; do sleep 10; done;"
+
     stdin_open: true
     tty: true

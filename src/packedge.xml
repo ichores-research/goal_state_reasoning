@@ -1,0 +1,15 @@
+<package format="2">
+  <name>goal_state_reasoning</name>
+  <version>0.0.0</version>
+  <description>The goal_state_reasoning package</description>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <export>
+  </export>
+</package>
