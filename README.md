@@ -55,11 +55,12 @@ TBD start with agent
 ```
 # temporary
 docker-compose exec goal_state_reasoning bash
+#inside container
 source catkin_ws/devel/setup.bash;
 rosparam load /root/config/${CONFIG} /pose_estimator;
 
-#inside container
-python3 agent.py "command"
+cd goal_state_reasoning
+python3 main.py "command"
 ```
 ## Example Result (ReAct)
 **Human:** 

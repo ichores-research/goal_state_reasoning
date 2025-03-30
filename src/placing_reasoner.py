@@ -102,15 +102,16 @@ class PlaceReasoner(metaclass=Singleton):
         self.pipe = self.prompt | self.llm | self.coords_validation
     
     def coords_validation(self, ai_message: AIMessage):
-        if ai_message[:7] != "Output:":
-            raise ValueError("Badly formed answer. Please start with 'Output:'")
+
         try:
-            output = ai_message[7:].strip()
-            return output
-        except ValueError:
-            raise ValueError("Badly formed answer. Please provide coordinates as a tuple (x,y,z)")
-        finally:
+            ai_message = ai_message.content
+        except AttributeError:
+            pass
+        if ai_message[:7] != "Output:":
             return ai_message
+
+        return ai_message[7:].strip()
+
 
     def run(self, object_in_the_gripper, where):
         if os.environ.get("TEST_RUN") == "TRUE":
@@ -129,7 +130,7 @@ class PlaceReasoner(metaclass=Singleton):
         else:
             input = parse_scene_for_placing(object_in_the_gripper)
         input["command"] = where
-        output = self.pipe.invoke({"input": str(input)})
+        output = self.coords_validation(self.pipe.invoke({"input": str(input)}))
         return output
         
 
@@ -165,6 +166,8 @@ if __name__ == "__main__":
     "table limitations": {{"min_x": -0.42, "max_x": 0.55, "min_y": "no limits", "max_y":0.1, "min_z":0.21, "max_z":2.11}}
     }}"""
     reasoner.pipe.invoke({"input": str(input)})
+
+    
 
 
     
