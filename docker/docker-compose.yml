@@ -1,7 +1,7 @@
 version: '2.4'
 services:
   goal_state_reasoning:
-    image: goal_state_reasoning
+    image: goal_state_reasoning:latest
     privileged: true
     build: 
       context: .
@@ -12,6 +12,7 @@ services:
       - /dev/bus/usb:/dev/bus/usb
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../src:/root/goal_state_reasoning
+      - ../goal_state_reasoning_msgs /root/catkin_ws/src/goal_state_reasoning_msgs
       - ../config:/root/config
       - "../../../data/datasets:/root/goal_state_reasoning/datasets:rw"
     environment:
@@ -27,7 +28,7 @@ services:
                       source catkin_ws/devel/setup.bash;
                       rosparam load /root/config/${CONFIG} /pose_estimator;
                       cd goal_state_reasoning;
-                      while true; do sleep 10; done;"
+                      python main.py"
 
     stdin_open: true
     tty: true

@@ -51,17 +51,16 @@ tiago #this is an alias
 ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago_cracow.yaml docker-compose up -d
 ```
 
-TBD start with agent 
+To call LLM reasoner service:
 ```
-# temporary
 docker-compose exec goal_state_reasoning bash
-#inside container
-source catkin_ws/devel/setup.bash;
-rosparam load /root/config/${CONFIG} /pose_estimator;
 
-cd goal_state_reasoning
-python3 main.py "command"
+#inside container
+source catkin_ws/devel/setup.bash
+rosservice call /LLM_planning_reasoner "command: '<your command>'
 ```
+
+
 ## Example Result (ReAct)
 **Human:** 
 Make a bowl of fruits

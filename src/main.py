@@ -2,7 +2,7 @@
 import argparse
 import os
 from agent import Agent
-from goal_state_reasoning.srv import LLM_planner_service, LLM_planner_serviceResponse
+from goal_state_reasoning_msgs.srv import LLM_planner_service, LLM_planner_serviceResponse
 import rospy
 
 # Initialize the agent globally, so it's created only once
@@ -18,10 +18,10 @@ def handle_agent_call(req):
     # Check if the agent is already created
     if agent is None:
         rospy.loginfo("Creating the agent...")
-        #agent = Agent()  # Create the agent once
+        agent = Agent()  # Create the agent once
 
     try:
-        #agent.run(req)
+        agent.run(req.command)
         action_success = True  # Assume the action was successful
     except Exception as e:
         rospy.logerr(f"Error running LLM agent: {e}")
@@ -37,7 +37,7 @@ def LLM_planner_service_server():
     rospy.init_node('LLM_planner')
 
     # Advertise the Trigger service
-    rospy.Service('LLM_plan_and_exec', LLM_planner_service, handle_agent_call)
+    rospy.Service('/LLM_plan_and_exec', LLM_planner_service, handle_agent_call)
 
     rospy.loginfo("LLM planner service ready.")
 

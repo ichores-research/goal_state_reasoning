@@ -1,5 +1,3 @@
-# Request
 string command
 ---
-# Response
 bool success
