@@ -12,7 +12,7 @@ services:
       - /dev/bus/usb:/dev/bus/usb
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../src:/root/goal_state_reasoning
-      - ../goal_state_reasoning_msgs /root/catkin_ws/src/goal_state_reasoning_msgs
+      - ../goal_state_reasoning_msgs:/root/catkin_ws/src/goal_state_reasoning_msgs
       - ../config:/root/config
       - "../../../data/datasets:/root/goal_state_reasoning/datasets:rw"
     environment:
@@ -24,11 +24,5 @@ services:
       - CONFIG=${CONFIG}
     ports:
       - "11434:11434"
-    command: bash -c "ollama pull llama3:70b &&
-                      source catkin_ws/devel/setup.bash;
-                      rosparam load /root/config/${CONFIG} /pose_estimator;
-                      cd goal_state_reasoning;
-                      python main.py"
-
     stdin_open: true
     tty: true

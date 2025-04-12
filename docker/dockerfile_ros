@@ -85,6 +85,9 @@ langchain-ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 RUN ollama serve &  
 
+COPY entrypoint.sh /root/entrypoint.sh
+RUN chmod +x /root/entrypoint.sh
+
 WORKDIR /root
 
-
+ENTRYPOINT /root/entrypoint.sh
