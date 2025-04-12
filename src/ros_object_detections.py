@@ -108,7 +108,7 @@ def get_pre_grasps(transformed_grasps, pre_grasp_distance = 0.1):
     pre_grasps_info = []
     align_x_to_z = tf_trans.quaternion_from_euler(0, np.pi / 2, 0)
 
-    for idx, grasp_matrix in enumerate(transformed_grasps):
+    for grasp_matrix in transformed_grasps:
         grasp_matrix = np.array(grasp_matrix).reshape(4, 4)
 
         # Position of the Arrow (Base)
