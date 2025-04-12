@@ -50,6 +50,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --ignore-installed open3d
+RUN python3 -m pip install 'tensorflow[and-cuda]'
 
 # catkin tools
 RUN apt-get update && apt-get install --no-install-recommends -y --allow-unauthenticated \
@@ -79,6 +80,7 @@ langchain_core \
 langchainhub \
 langsmith \
 langchain-ollama 
+
 
 
 ## Ollama

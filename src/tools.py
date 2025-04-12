@@ -27,6 +27,7 @@ from placing_reasoner import PlaceReasoner
 
 
 PICKED_OBJECT = None
+OBJECTS_IN_SCENE = None
 
 # Tool Definitions
 @tool
@@ -37,7 +38,21 @@ def get_object_list(text:str) -> List[str]:
         if PICKED_OBJECT is not None:
             obj_list.remove(PICKED_OBJECT) 
         return obj_list
-    return robot_execute(Task.GET_OBJECT_NAMES.value, "")
+   
+    global OBJECTS_IN_SCENE
+    if OBJECTS_IN_SCENE is None:
+        OBJECTS_IN_SCENE = robot_execute(Task.GET_OBJECT_NAMES.value, "")
+    else:
+        obj_list = robot_execute(Task.GET_OBJECT_NAMES.value, "")
+        OBJECTS_IN_SCENE = set(OBJECTS_IN_SCENE).union(set(obj_list)) #use set to workaround yolo or gdrnpp unstable detection
+    return OBJECTS_IN_SCENE
+
+
+
+@tool 
+def get_object_pose(object_name:str) -> dict:
+    """Get the position and orientation of the object in the scene"""
+    return robot_execute(Task.GET_OBJECT_POSE.value, object_name)
 
 @tool
 def pick_object(object_name:str) -> str:
@@ -53,16 +68,12 @@ def pick_object(object_name:str) -> str:
         return f'{object_name} is not available in the scene.'
     else:
         try:
+            robot_execute(Task.PICK_OBJECT.value, object_name)
             PICKED_OBJECT = object_name
             return f'You have picked up {object_name}'
         except:
             return f'You cannot pick {object_name}. Try again or do somethig else.'
     
-
-@tool 
-def get_object_position(object_name:str) -> dict:
-    """Get the position and orientation of the object in the scene"""
-    return robot_execute(Task.GET_OBJECT_POSE.value, object_name)
 
 
 @tool
@@ -100,21 +111,22 @@ def release_picked_object(text: str) -> str:
             return f'You cannot release {PICKED_OBJECT}. Try again or do somethig else.'
 
 
-# @tool
-# def get_pointing_sequence(text:str) -> tuple:
-#     """Returns a sequence of objects that the user pointed to with their hand while issuing a command"""
-#     return tuple()
+@tool
+def action_impossible(text:str) -> tuple:
+    """Call this function when the action is impossible"""
+    return "To end the conversation, please say: Final Answer: I am not able to perform this action."
 
 
 # Tool List
 TOOL_LIST = [
     get_object_list, 
+    get_object_pose,
     pick_object,
     place_object,
-    release_picked_object
+    release_picked_object,
+    action_impossible
 ]
-if os.environ.get("TEST_RUN") != "TRUE": 
-    TOOL_LIST.extend([get_object_position])
+
 
 # Function to find a tool by namewhen tool is not found
 def find_tool_by_name(tool_name: str) -> Tool:

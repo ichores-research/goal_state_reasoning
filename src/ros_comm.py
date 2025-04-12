@@ -29,7 +29,11 @@ def robot_execute(task, message=None):
         coords = tuple(message)
         #TODO: Implement robot arm movement
         response = "success"
-        
+    elif task == Task.PICK_OBJECT.value:
+        object_name = message
+        grasp_info = get_best_top_grasp(object_name)
+        #TODO: Implement robot arm movement
+        response = "success"
     else:
         response = "Unknown task"
 
