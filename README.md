@@ -58,8 +58,13 @@ docker-compose exec goal_state_reasoning bash
 #inside container
 source catkin_ws/devel/setup.bash
 rosservice call /LLM_planning_reasoner "command: '<your command>'
-```
 
+```
+To see command output:
+
+```
+docker-compose logs goal_state_reasoning 
+```
 
 ## Example Result (ReAct)
 **Human:** 
