@@ -63,11 +63,11 @@ class PlaceReasoner(metaclass=Singleton):
             1. 3D objects located on the table
             2. One object held by you in the gripper
             3. A description of what to do with held object
-            4. Table coordinate limitations
+            4. Table corners coordinates
 
         Each object on the table is represented by its name, position (x,y,z) and diameter.
         The object held by you is described by name and diameter.
-        The table is represented by six coordinate values: min_x, max_x, min_y, max_y, min_z, max_z.
+        The table is represented by four corners with their (x,y,z) coordinates.
 
         The output is a point (x,y,z) where the held object should be released.
         The object can only be released on the table.
@@ -77,14 +77,14 @@ class PlaceReasoner(metaclass=Singleton):
         The following are example inputs and outputs.
 
         Input: {{'objects on the table': [
-        {{'name': '029_plate', 'position': [0.07, 0.35, 1.45], 'diameter': 0.26}},
-        {{'name': '011_banana', 'position': [0.06, 0.3, 1.55], 'diameter': 0.2}},
+        {{'name': '029_plate', 'position': [0.03, 0.03, 0.94], 'diameter': 0.26}},
+        {{'name': '011_banana', 'position': [0.04, 0.04, 1.09], 'diameter': 0.2}},
         ],
         'object in the gripper': {{'name': '025_mug', 'diameter': 0.13}},
         'command': 'place the mug to the right of the plate'}},
-        'table limitations': {{'min_x': -0.51, 'max_x':0.5, 'min_y': 'no limits', 'max_y':0.5, 'min_z':1.2, 'max_z' : 2.5}}
+        "table corners": {{"left back": [-0.45, -0.25, 1.2],"right back": [0.45, -0.25, 1.2],"left front": [-0.45, 0.16, 0.8],"right front": [0.45, 0.16, 0.8]}}
         }}
-        Output: (0.25, 0.31, 1.51)
+        Output: (0.16, -0.09, 1.09)
 
         Your output is only one line and starts with "Output:", please do not output other redundant words. 
         The y coordinate cannot be greater than max_y.

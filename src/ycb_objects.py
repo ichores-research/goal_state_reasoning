@@ -5,9 +5,10 @@ import yaml
 
 # TODO real table estiamtion
 TABLE_HEURISTIC = {
-  #"table corners": {"left back": [-0.42,0.1,1.37],"right back": [0.55,0.1,2.11],"left front": [-0.10,0.1,0.21],"right front": [0.38,0.1, 0.8]}
-  "min_x": -0.37, "max_x": 0.36, "min_y": "no limits", "max_y":0.18, "min_z":0.67, "max_z":1.33
+  "table corners": {"left back": [-0.45, -0.25, 1.2],"right back": [0.45, -0.25, 1.2],"left front": [-0.45, 0.16, 0.8],"right front": [0.45, 0.16, 0.8]}
 }
+
+
 
 def load_grasp_annotations(folder_path, yaml_file_path):
     with open(yaml_file_path, 'r') as yaml_file:

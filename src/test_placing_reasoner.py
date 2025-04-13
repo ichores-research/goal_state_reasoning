@@ -1,3 +1,19 @@
+"""
+Testing checklist:
+1) get robot and table in place -> table coordinates are set
+2) choose scenario
+3) place objects
+4) take photo
+5) take rviz screenshot
+6) run test_placing_reasoner.py
+7) get avg coords and visualize the object in rviz
+8) take rviz  screenshot
+*9) visualize all coords in rviz
+
+Usage:
+python test_placing_reasoner.py <obj_in_gripper> <command> --output_file <output_file> --rep <num_reps>
+"""
+
 import argparse
 import csv
 from datetime import datetime
@@ -27,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_file",
         type=str,
-        default=f"test_placing_reasoner_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.json",
+        default=f"test_output/test_placing_reasoner_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.json",
         help="File to save the results"
     )
     parser.add_argument(
