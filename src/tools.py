@@ -98,7 +98,7 @@ def place_object(where: str) -> str:
 
 @tool
 def release_picked_object(text: str) -> str:
-    """If your robotic arm is busy release the picked up object back on its original position"""
+    """If your robotic arm is busy release the picked up object back on the table"""
     global PICKED_OBJECT
     if PICKED_OBJECT is None:
         return f'You are not holding any objects'
