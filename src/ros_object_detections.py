@@ -74,9 +74,9 @@ def parse_scene_for_placing(object_in_the_gripper=None):
                         ],
             'diameter': OBJECT_INFO[obj.name]['diameter']
         })
-        scene['table limitations'] = TABLE_HEURISTIC
-        if object_in_the_gripper is not None:
-            scene['object in the gripper'] = {'name': object_in_the_gripper, 'diameter': OBJECT_INFO[object_in_the_gripper]['diameter']}
+    scene['table limitations'] = TABLE_HEURISTIC
+    if object_in_the_gripper is not None:
+        scene['object in the gripper'] = {'name': object_in_the_gripper, 'diameter': OBJECT_INFO[object_in_the_gripper]['diameter']}
     return scene
 
 
