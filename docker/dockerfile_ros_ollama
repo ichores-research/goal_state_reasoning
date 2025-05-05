@@ -3,12 +3,9 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get install -y \
-	python3-opencv ca-certificates python3-dev git wget sudo ninja-build
+	python3-opencv ca-certificates python3-dev python3-pip git wget sudo ninja-build
 RUN ln -sv /usr/bin/python3 /usr/bin/python
 
-RUN wget https://bootstrap.pypa.io/get-pip.py && \
-	python3 get-pip.py && \
-	rm get-pip.py
 
 # install lsb-release, curl, gnu
 RUN apt-get update \
@@ -79,7 +76,8 @@ langchain-community \
 langchain_core \
 langchainhub \
 langsmith \
-langchain-ollama 
+langchain-ollama \
+langchain-openai
 
 
 
@@ -87,7 +85,7 @@ langchain-ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 RUN ollama serve &  
 
-COPY entrypoint.sh /root/entrypoint.sh
+COPY entrypoint_ollama.sh /root/entrypoint.sh
 RUN chmod +x /root/entrypoint.sh
 
 WORKDIR /root

@@ -1,0 +1,93 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update && apt-get install -y \
+	python3-opencv ca-certificates python3-dev python3-pip git wget sudo ninja-build
+RUN ln -sv /usr/bin/python3 /usr/bin/python
+
+
+# install lsb-release, curl, gnu
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    lsb-release \
+    curl \
+    gnupg \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# add the keys
+RUN sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+
+# install ros
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ros-noetic-desktop-full \
+    ros-noetic-catkin \
+    ros-noetic-vision-msgs \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/ros/noetic/setup.bash
+RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+RUN source ~/.bashrc
+
+# install python dependencies
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    python3-rosdep \
+    python3-rosinstall \
+    python3-rosinstall-generator \
+    python3-wstool \
+    build-essential \
+    python3-rosdep \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --ignore-installed open3d
+RUN python3 -m pip install 'tensorflow[and-cuda]'
+
+# catkin tools
+RUN apt-get update && apt-get install --no-install-recommends -y --allow-unauthenticated \
+     python3-catkin-tools \
+     && rm -rf /var/lib/apt/lists/*
+
+RUN sudo rosdep init
+RUN rosdep update
+RUN mkdir -p /root/catkin_ws/src
+RUN cd /root/catkin_ws/
+RUN /bin/bash -c  '. /opt/ros/noetic/setup.bash; cd /root/catkin_ws; catkin config -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.6m.so; catkin build'
+
+# clone and build message and service definitions
+RUN /bin/bash -c 'cd /root/catkin_ws/src; \
+                  git clone https://github.com/v4r-tuwien/object_detector_msgs.git'
+RUN /bin/bash -c 'cd /root/catkin_ws/src; \
+                  git clone https://gitlab.informatik.uni-bremen.de/robokudo/robokudo_msgs.git'
+RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; cd /root/catkin_ws; catkin build'
+
+
+# install langchain dependencies
+RUN python3 -m pip install \
+python-dotenv \
+langchain \
+langchain-community \
+langchain_core \
+langchainhub \
+langsmith \
+langchain-ollama \
+langchain-openai
+
+
+
+## Ollama is also installed in this version to enable other models
+RUN curl -fsSL https://ollama.com/install.sh | sh
+RUN ollama serve &  
+
+COPY entrypoint_openai.sh /root/entrypoint.sh
+RUN chmod +x /root/entrypoint.sh
+
+WORKDIR /root
+
+ENTRYPOINT /root/entrypoint.sh
