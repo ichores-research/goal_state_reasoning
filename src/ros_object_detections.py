@@ -5,7 +5,10 @@ from object_detector_msgs.srv import detectron2_service_server,  estimate_poses
 from sensor_msgs.msg import Image
 from ycb_objects import *
 import tf.transformations as tf_trans
-
+import tf2_ros
+import tf2_geometry_msgs
+from tf.transformations import quaternion_from_matrix, quaternion_matrix
+from geometry_msgs.msg import PoseStamped
 
 DATASET = os.environ.get("DATASET", "ycb_ichores")
 OBJECT_INFO = get_ycb_objects_info(DATASET)
@@ -14,9 +17,9 @@ OBJECT_INFO = get_ycb_objects_info(DATASET)
 def detect_objects(rgb=None):
     if rgb is None:
         rgb = rospy.wait_for_message(rospy.get_param('/pose_estimator/color_topic'), Image)
-    rospy.wait_for_service('detect_objects')
+    rospy.wait_for_service('/detect_objects')
     try:
-        detect_objects_service = rospy.ServiceProxy('detect_objects', detectron2_service_server)
+        detect_objects_service = rospy.ServiceProxy('/detect_objects', detectron2_service_server)
         response = detect_objects_service(rgb)
         return response.detections.detections
     except rospy.ServiceException as e:
@@ -41,7 +44,7 @@ def get_object_pose(object_name):
     detections = detect_objects(rgb)
 
     if detections is None or len(detections) == 0:
-        return "Nothing detected"
+        return None
     else:
 
         estimated_pose_camFrame = None
@@ -174,6 +177,7 @@ def get_object_grasping_points(object_name):
         return None
     
     grasps_tfs = OBJECT_INFO[object_name]['grasps']
+
     pose = get_object_pose(object_name)
     
     if pose is None:
@@ -214,10 +218,106 @@ def get_grasping_coords(obj_name):
     best_top_grasp = get_best_top_grasp(pre_grasp)
     return best_top_grasp
 
+
+def matrix_to_pose(matrix, frame_id="head_link"):
+    """Convert a 4x4 numpy transform matrix to a PoseStamped."""
+    pose = PoseStamped()
+    pose.header.frame_id = frame_id
+    pose.header.stamp = rospy.Time.now()
+    pose.pose.position.x = matrix[0, 3]
+    pose.pose.position.y = matrix[1, 3]
+    pose.pose.position.z = matrix[2, 3]
+    q = quaternion_from_matrix(matrix)
+    pose.pose.orientation.x = q[0]
+    pose.pose.orientation.y = q[1]
+    pose.pose.orientation.z = q[2]
+    pose.pose.orientation.w = q[3]
+    return pose
+
+def get_z_alignment_score(pose):
+    """Returns the alignment of the local Z-axis with world Z-axis."""
+    rot = quaternion_matrix([
+        pose.orientation.x,
+        pose.orientation.y,
+        pose.orientation.z,
+        pose.orientation.w
+    ])
+    z_axis = rot[:3, 2]  # local Z in world frame
+    return z_axis[2]     # dot with global Z = [0, 0, 1]
+
+def get_best_tf_grasp(object_name): 
+    if object_name not in OBJECT_INFO:
+        print(f"Object {object_name} not found in dataset.")
+        return None
+
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+
+    # Your list of 4x4 grasp transform matrices
+    grasp_tf_matrices = OBJECT_INFO[object_name]['grasps']
+
+    top_score = -float('inf')
+    top_grasp_pose = None
+
+    for mat in grasp_tf_matrices:
+        tf_matrix = np.array(mat).reshape(4, 4)
+
+        # Convert to PoseStamped in head_link
+        grasp_pose = matrix_to_pose(tf_matrix, frame_id="xtion_rgb_optical_frame")
+
+        try:
+            # Transform to base_link
+            transform = tf_buffer.lookup_transform("base_link", "xtion_rgb_optical_frame", rospy.Time(0), rospy.Duration(1.0))
+            grasp_pose_base = tf2_geometry_msgs.do_transform_pose(grasp_pose, transform)
+
+            # Score Z alignment
+            score = get_z_alignment_score(grasp_pose_base.pose)
+
+            if score > top_score:
+                top_score = score
+                top_grasp_pose = grasp_pose_base
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logwarn("Transform failed for one grasp")
+
+    # Final result
+    if top_grasp_pose:
+
+        
+        print("Best top-down grasp found:")
+        print("Position:", top_grasp_pose.pose.position)
+        print("Orientation:", top_grasp_pose.pose.orientation)
+        print("Z-alignment score:", top_score)
+        
+        
+        return top_grasp_pose
+    else:
+        print("No valid grasp found.")
+        return None
+
+
+def heuristic_top_grasp(object_name):
+    obj_pose = get_object_pose(object_name)
+    if obj_pose is None:
+        return
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    transform = tf_buffer.lookup_transform("base_link", "xtion_rgb_optical_frame", rospy.Time(0), rospy.Duration(1.0))
+    grasp_pose_base = tf2_geometry_msgs.do_transform_pose(obj_pose, transform)
+    grasp_pose_base.pose.position.z += 0.15
+    grasp_pose_base.pose.position.x -= 0.35
+
+    grasp_pose_base.pose.orientation.x  = 0
+    grasp_pose_base.pose.orientation.y  = 0
+    grasp_pose_base.pose.orientation.z  = 0
+    grasp_pose_base.pose.orientation.w  = 1
     
+    return grasp_pose_base
+
 
 if __name__ == "__main__":
     rospy.init_node('object_detection_node')
+    """
     rate = rospy.Rate(200)
     try:
         while not rospy.is_shutdown():
@@ -236,3 +336,12 @@ if __name__ == "__main__":
         pass
     except KeyboardInterrupt:
         pass
+  
+    """
+    detections = detect_objects()
+    for detection in detections:
+        print(heuristic_top_grasp(detection.name))
+        break
+    
+    
+    

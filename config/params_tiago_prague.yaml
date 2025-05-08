@@ -1,0 +1,17 @@
+# Camera topics and frames
+im_width: 640
+im_height: 480
+intrinsics:
+- [511.23941992900706, 0.0, 323.8860613468399]
+- [0.0, 509.20165082252123, 226.7714318838691]
+- [0.0, 0.0, 1.0]
+
+# Topics
+color_topic: /xtion/rgb/image_rect_color
+depth_topic: /xtion/depth_registered/hw_registered/image_rect_raw
+depth_encoding: 32FC1  # mono16 for realsense and HSR, 32FC1 for ASUS Xtion (Tiago)
+depth_scale: 1       # 1000 -> depth map encoded in millimeters; 1 -> depth scale encoded in meters
+
+# Frame ids
+color_frame_id: xtion_rgb_optical_frame
+grasp_frame_id: gripper_link # its "gripper_link" for tiago and "hand_palm_link" for HSR

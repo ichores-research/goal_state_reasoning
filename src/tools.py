@@ -24,6 +24,7 @@ if os.environ.get("TEST_RUN") != "TRUE":
     except ImportError:
         pass
 from placing_reasoner import PlaceReasoner
+import re
 
 
 PICKED_OBJECT = None
@@ -57,22 +58,32 @@ def get_object_pose(object_name:str) -> dict:
 @tool
 def pick_object(object_name:str) -> str:
     """Pick an object with your robotic arm"""
+
     global PICKED_OBJECT
-    object_name = object_name.strip()
-    object_name = object_name.strip("'")
+    object_name = object_name.strip().strip("'")
     available_objects = get_object_list("")
+
+    # Check if the picked object matches the query (case-insensitive partial match)
+    if PICKED_OBJECT is not None and re.search(re.escape(object_name), PICKED_OBJECT, re.IGNORECASE):
+        return f'Your robotic arm is busy holding {PICKED_OBJECT}'
+
+    # Try to find a match in the available objects
+    matched_object = next(
+        (obj for obj in available_objects if re.search(re.escape(object_name), obj, re.IGNORECASE)),
+        None
+    )
 
     if PICKED_OBJECT is not None:
         return f'Your robotic arm is busy holding {PICKED_OBJECT}'
-    elif object_name not in available_objects:
+    elif matched_object is None:
         return f'{object_name} is not available in the scene.'
     else:
         try:
-            robot_execute(Task.PICK_OBJECT.value, object_name)
-            PICKED_OBJECT = object_name
-            return f'You have picked up {object_name}'
+            robot_execute(Task.PICK_OBJECT.value, matched_object)
+            PICKED_OBJECT = matched_object
+            return f'You have picked up {matched_object}'
         except:
-            return f'You cannot pick {object_name}. Try again or do somethig else.'
+            return f'You cannot pick {matched_object}. Try again or do somethig else.'
     
 
 
@@ -82,6 +93,9 @@ def place_object(where: str) -> str:
     `where` argument should describe the target position, eg. to the left of the mug, near the apple, etc."""
 
     global PICKED_OBJECT
+    if PICKED_OBJECT is None:
+        return "You are not holding any objects"
+    
     try:
         #PlaceReasoner is a singleton class preinitialized in agent.py
         #Uses the same llm object as agent.py

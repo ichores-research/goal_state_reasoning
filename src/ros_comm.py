@@ -2,6 +2,9 @@
 import rospy
 import enum
 from ros_object_detections import *
+from pick_and_place_prague import PickAndPlaceCommandSender
+
+pick_and_place_cmd_sender = PickAndPlaceCommandSender()
 
 
 class Task(enum.Enum):
@@ -27,12 +30,19 @@ def robot_execute(task, message=None):
         response = get_object_poses()
     elif task == Task.PLACE_OBJECT.value:
         coords = tuple(message)
-        #TODO: Implement robot arm movement
+        pick_and_place_cmd_sender.send_arm_pose(coords)
         response = "success"
     elif task == Task.PICK_OBJECT.value:
         object_name = message
-        grasp_info = get_best_top_grasp(object_name)
-        #TODO: Implement robot arm movement
+        num_attempts = 5 #number of attempts to estimate grasps
+        for i in range(num_attempts):
+            grasp_pose = get_best_tf_grasp(object_name)
+            if grasp_pose is not None:
+                break
+            else:
+                return "failed"
+
+        pick_and_place_cmd_sender.send_gripper_command("01")
         response = "success"
     else:
         response = "Unknown task"
