@@ -45,6 +45,12 @@ Generating reasoning traces allow the model to induce, track, and update action 
 
 ## How to run
 
+### Choose model setup
+You can choose to run planning agent with openai model or locally hosted model using ollama.
+TBD
+
+### Run service
+
 ```
 cd docker
 tiago #this is an alias
