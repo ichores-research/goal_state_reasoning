@@ -55,7 +55,7 @@ TBD
 cd docker
 tiago #this is an alias
 ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago_cracow.yaml docker-compose up -d
-```
+
 
 To call LLM reasoner service:
 ```

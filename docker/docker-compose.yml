@@ -1,11 +1,11 @@
 version: '2.4'
 services:
   goal_state_reasoning:
-    image: goal_state_reasoning:openai
+    image: goal_state_reasoning:${MODEL_HOSTING:-ollama}
     privileged: true
     build: 
       context: .
-      dockerfile: dockerfile_ros_openai
+      dockerfile: dockerfile_ros_${MODEL_HOSTING:-ollama}
     network_mode: "host"
     runtime: "nvidia"
     volumes:
@@ -22,6 +22,7 @@ services:
       - QT_X11_NO_MITSHM=1
       - DATASET=${DATASET}
       - CONFIG=${CONFIG}
+      - TEST_RUN=${TEST_RUN:-FALSE}
     ports:
       - "11434:11434"
     stdin_open: true
