@@ -20,8 +20,14 @@ def robot_execute(task, message=None):
         detections = detect_objects()
         response = [detection.name for detection in detections]
     elif task == Task.GET_OBJECT_POSE.value:
+        response = None
         object_name = message
-        response = get_object_pose(object_name)
+        for i in range(3):
+            response = get_object_pose(object_name)
+            if response is not None:
+                break
+        if response is None:
+            response = "Object pose could not be estimated."
     elif task == Task.GET_OBJECT_POSES.value:
         object_name = message
         response = get_object_poses()
@@ -31,7 +37,7 @@ def robot_execute(task, message=None):
         response = "success"
     elif task == Task.PICK_OBJECT.value:
         object_name = message
-        grasp_info = get_best_top_grasp(object_name)
+        #grasp_info = get_best_top_grasp(object_name)
         #TODO: Implement robot arm movement
         response = "success"
     else:

@@ -24,7 +24,7 @@ from placing_reasoner import PlaceReasoner
 from langchain_ollama.llms import OllamaLLM
 from callbacks import AgentCallbackHandler
 import rospy
-from ros_object_detections import parse_scene_for_placing
+from ros_object_detections import parse_scene_for_placing, get_object_pose
 
 
 
@@ -68,14 +68,27 @@ if __name__ == "__main__":
     outputs = []
     num_parsing_errors = 0
     for i in range(args.rep):
-        output = reasoner.run(args.object_in_gripper, args.command)
+        
+       
         try: 
+            output = reasoner.run(args.object_in_gripper, args.command)
             output = eval(output)
-        except:
+
+            prompt = parse_scene_for_placing(args.object_in_gripper)
+            
+            for j, obj in enumerate(prompt['objects on the table']):
+                orientation = get_object_pose(obj['name']).pose.orientation
+                prompt['objects on the table'][j]['orientation'] =  [
+                    round(orientation.x, 2), 
+                    round(orientation.y, 2), 
+                    round(orientation.z, 2), 
+                    round(orientation.w, 2)]
+        except Exception as e:
             num_parsing_errors += 1
-            pass
-        prompt = parse_scene_for_placing(args.object_in_gripper)
-        outputs.append({"output": output, "prompt": prompt})
+            continue
+        
+        outputs.append({"output": output, "prompt": prompt, "command": args.command})
+        print(f"Running test {i+1}/{args.rep}")
     
     json_file = args.output_file
     # Open the file in write mode and write the data as JSON

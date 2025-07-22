@@ -12,6 +12,7 @@ import os
 from typing import Union
 from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
 from langchain_core.prompts import PromptTemplate
+import rospy
 try:
     from langchain_openai import ChatOpenAI
     import dotenv
@@ -25,6 +26,8 @@ from callbacks import AgentCallbackHandler
 from langchain.tools.render import render_text_description
 from placing_reasoner import PlaceReasoner
 from tools import find_tool_by_name, TOOL_LIST
+import argparse
+
 
 class Agent():
     def __init__(self):
@@ -51,7 +54,7 @@ class Agent():
         
         Begin!
         
-        Question: How to {input}?
+        Question: {input}
         Thought: {agent_scratchpad}
         """
 
@@ -126,8 +129,20 @@ class Agent():
         if isinstance(agent_step, AgentFinish):
             print("### AgentFinish ###")
             print(agent_step.return_values)
+            print("### Intermediate Steps ###", len(intermediate_steps))
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "query",
+        type=str,
+        help="Query for the ReAct Agent",
+        default="make a bowl of fruits",
+    )
+    args = parser.parse_args()
+    # Initialize the ROS node
+    rospy.init_node('LLM_planner')
+
     agent = Agent()
-    agent.run("place the banana in the pan")
+    agent.run(args.query)

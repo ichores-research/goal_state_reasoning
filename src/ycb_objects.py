@@ -5,7 +5,7 @@ import yaml
 
 # TODO real table estiamtion
 TABLE_HEURISTIC = {
-  "table corners": {"left back": [-0.45, -0.25, 1.2],"right back": [0.45, -0.25, 1.2],"left front": [-0.45, 0.16, 0.8],"right front": [0.45, 0.16, 0.8]}
+  "table corners": {"left back": [-0.49, 0.19, 2.04],"right back": [0.45, 0.18, 1.97],"left front": [-0.42, 0.24, 0.96],"right front": [0.45, 0.31, 1.00]}
 }
 
 
