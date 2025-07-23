@@ -10,22 +10,26 @@ Description:
 
 import os
 from typing import Union
-from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
-from langchain_core.prompts import PromptTemplate
-import rospy
-try:
+
+if os.environ.get("TEST_RUN") != "TRUE":
+    import rospy
+
+if os.environ.get("MODEL_HOST") == "openai":
     from langchain_openai import ChatOpenAI
     import dotenv
     dotenv.load_dotenv()
-except:
-    pass
-from langchain_ollama.llms import OllamaLLM
+else:
+    from langchain_ollama.llms import OllamaLLM
+
 from langchain.schema import AgentAction, AgentFinish
 from langchain.agents.format_scratchpad import format_log_to_str
-from callbacks import AgentCallbackHandler
 from langchain.tools.render import render_text_description
+from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
+from langchain_core.prompts import PromptTemplate
+
+from callbacks import AgentCallbackHandler
 from placing_reasoner import PlaceReasoner
-from tools import find_tool_by_name, TOOL_LIST
+from tools import TOOL_LIST, find_tool_by_name
 import argparse
 
 
@@ -35,8 +39,8 @@ class Agent():
         A user gives you a command to execute. 
         Execute command using pick and place movements. 
         Answer with a sequence of pick and place movements.
-        Think if the command is possible to execute given the objects in the scene.  
-        Answer the following questions as best you can.
+        If the action is impossible to execute given the objects in the scene output: "Final Answer: I am not able to perform this action."
+        
         You have access to the following tools:
 
         {tools}
@@ -64,7 +68,7 @@ class Agent():
             tools=render_text_description(self.tools),
             tool_names=", ".join([t.name for t in self.tools]),
         )
-        if os.environ.get("TEST_RUN") == "TRUE":
+        if os.environ.get("MODEL_HOST") == "openai":
             self.llm = ChatOpenAI(
                 model="gpt-4o-mini",
                 temperature=0,
@@ -82,7 +86,7 @@ class Agent():
 
 
 
-        # llm agent
+        # llm agentAvailable tools are: {[tool.name for tool in self.tools]}.
         self.agent = (
             {
                 "input": lambda x: x["input"],
@@ -120,10 +124,19 @@ class Agent():
             # Check if the agent "wants" to execute some action
             if isinstance(agent_step, AgentAction):
                 tool_name = agent_step.tool
-                tool_to_use = find_tool_by_name(tool_name)
-                tool_input = agent_step.tool_input
-                observation = tool_to_use.func(str(tool_input))
-                print(f"{observation=}")
+                print(type(tool_name), tool_name)
+
+                if tool_name is None or tool_name == "None":
+                    observation = "No action specified. To end the conversation, please state your final answer: 'Final Answer: ...'"
+                else:
+                    tool_to_use = find_tool_by_name(tool_name)
+
+                    if tool_to_use is not None:
+                        tool_input = agent_step.tool_input
+                        observation = tool_to_use.func(str(tool_input))
+                        print(f"{observation=}")
+                    else:
+                        observation = f"Tool {tool_name} not found. Available tools are: {[tool.name for tool in TOOL_LIST]}. "
                 intermediate_steps.append((agent_step, str(observation)))
 
         if isinstance(agent_step, AgentFinish):
@@ -141,8 +154,10 @@ if __name__ == "__main__":
         default="make a bowl of fruits",
     )
     args = parser.parse_args()
-    # Initialize the ROS node
-    rospy.init_node('LLM_planner')
 
+    if os.environ.get("TEST_RUN") != "TRUE":
+        # Initialize the ROS node
+        rospy.init_node(f'LLM_planner{__name__}')
+   
     agent = Agent()
     agent.run(args.query)

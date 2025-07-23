@@ -46,19 +46,28 @@ Generating reasoning traces allow the model to induce, track, and update action 
 ## How to run
 
 ### Choose model setup
-You can choose to run planning agent with openai model or locally hosted model using ollama.
-TBD
+You can choose to run planning agent with **openai model** or locally hosted model using **ollama**.
+Specify preferred hosting method by setting the environmental variable `MODEL_HOST` to openai or ollama.
+*Defaults to ollama*.
 
-### Run service
+-> With openai you need to place your openai api key in src/.env file before starting the container.
 
-```
+```bash
 cd docker
 tiago #this is an alias
-ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP  DATASET=ycb_ichores CONFIG=params_tiago_cracow.yaml docker-compose up -d
-
-
-To call LLM reasoner service:
+ROS_MASTER_URI=$ROS_MASTER_URI ROS_IP=$ROS_IP DATASET=ycb_ichores CONFIG=params_tiago_cracow.yaml MODEL_HOST=ollama docker-compose up -d
 ```
+
+#### Option1: call ros service
+
+To see LLM outputs live open container logs in one terminal
+```bash
+docker compose logs -f goal_state_reasoning 
+```
+
+
+To call LLM reasoner service open another terminal and run:
+```bash
 docker-compose exec goal_state_reasoning bash
 
 #inside container
@@ -66,9 +75,46 @@ source catkin_ws/devel/setup.bash
 rosservice call /LLM_plan_and_exec "command: '<your command>'
 ```
 
-To see LLM outputs check container logs
+**Important notice:** if service returns `success: True` it doesn't mean the agent was able to perform given action. Please check the logs to find out. `success: False` means the agent could not run correctly and returned an error during execution.
+
+#### Option2: run python script
+You can also run python script for your command execution inside the container
+```bash
+docker-compose exec goal_state_reasoning bash
+
+#inside container
+source catkin_ws/devel/setup.bash
+cd goal_state_reasoning
+python agent.py "Pick up a banana." #example query
 ```
-docker compose logs -f goal_state_reasoning 
+
+#### Additional option: run without connection to robot
+
+To run without robot - set `TEST_RUN` env variable to `TRUE`
+This will use predefined, hadrcoded scene setup and object positions during agent run.
+
+```bash
+docker-compose exec goal_state_reasoning bash
+
+#inside container
+source catkin_ws/devel/setup.bash
+cd goal_state_reasoning
+
+export TEST_RUN=TRUE
+python agent.py "Pick up a banana." #example query
+```
+
+
+### Test object detections (grdnpp and yolo) from inside goal_state_reasoning container
+
+```bash
+docker-compose exec goal_state_reasoning bash
+
+#inside container
+source catkin_ws/devel/setup.bash
+cd goal_state_reasoning
+
+python ros_object_detection.py
 ```
 
 

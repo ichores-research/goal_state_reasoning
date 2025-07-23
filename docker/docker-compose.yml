@@ -1,11 +1,11 @@
 version: '2.4'
 services:
   goal_state_reasoning:
-    image: goal_state_reasoning:${MODEL_HOSTING:-ollama}
+    image: goal_state_reasoning:${MODEL_HOST:-ollama}
     privileged: true
     build: 
       context: .
-      dockerfile: dockerfile_ros_${MODEL_HOSTING:-ollama}
+      dockerfile: dockerfile_ros_${MODEL_HOST:-ollama}
     network_mode: "host"
     runtime: "nvidia"
     volumes:

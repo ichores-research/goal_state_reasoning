@@ -11,23 +11,22 @@ Description:
 
 import os
 from langchain_core.prompts import PromptTemplate
-from langchain_ollama.llms import OllamaLLM
 from callbacks import AgentCallbackHandler
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import AIMessage
+
+if os.environ.get("MODEL_HOST") == "openai":
+    from langchain_openai import ChatOpenAI
+    import dotenv
+    dotenv.load_dotenv()
+else:
+    from langchain_ollama.llms import OllamaLLM
+
 if os.environ.get("TEST_RUN") != "TRUE":
-    try:
-        import rospy
-        from ros_object_detections import parse_scene_for_placing
-    except ImportError:
-        pass
-if os.environ.get("TEST_RUN") == "TRUE":
-    try:
-        from langchain_openai import ChatOpenAI
-        import dotenv
-        dotenv.load_dotenv()
-    except:
-        pass
+    import rospy
+    from ros_object_detections import parse_scene_for_placing
+
+
 
 
 class Singleton(type):
@@ -136,9 +135,8 @@ class PlaceReasoner(metaclass=Singleton):
 
 
 if __name__ == "__main__":
-    if os.environ.get("TEST_RUN") != "TRUE":
-        rospy.init_node('placing_reasoner')
-    
+
+    if os.environ.get("MODEL_HOST") == "ollama":
         reasoner = PlaceReasoner(
             OllamaLLM(
                 model="llama3:70b",
@@ -155,8 +153,12 @@ if __name__ == "__main__":
             stop=["\nObservation", "Observation"],
             callbacks=[AgentCallbackHandler()],
         ))
-    # Place SPAM canned meat in the scene
-    #reasoner.run( object_in_the_gripper="013_apple", where="near the canned meat")
+
+
+    if os.environ.get("TEST_RUN") != "TRUE":
+        rospy.init_node('placing_reasoner')
+    
+
     input = """{{'objects on the table': [
     {{'name': '010_potted_meat_can', 'position': [0.21, 0.31, 1.5], 'diameter': 0.13}},
     {{'name': '029_plate', 'position': [0.06, 0.34, 1.39], 'diameter': 0.26}},
@@ -165,6 +167,7 @@ if __name__ == "__main__":
     'command': 'on the 029_plate'}},
     "table limitations": {{"min_x": -0.42, "max_x": 0.55, "min_y": "no limits", "max_y":0.1, "min_z":0.21, "max_z":2.11}}
     }}"""
+
     reasoner.pipe.invoke({"input": str(input)})
 
     
