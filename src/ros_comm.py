@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 import rospy
 import enum
-from ros_object_detections import *
+from object_detection import *
+from ycb_objects import get_ycb_objects_info
+from pick_and_place import pick_object
+
+
+DATASET = os.environ.get("DATASET", "ycb_ichores")
+OBJECT_INFO = get_ycb_objects_info(DATASET)
+
 
 
 class Task(enum.Enum):
@@ -16,9 +23,11 @@ class Task(enum.Enum):
 
 
 def robot_execute(task, message=None):
+
     if task == Task.GET_OBJECT_NAMES.value: 
         detections = detect_objects()
         response = [detection.name for detection in detections]
+
     elif task == Task.GET_OBJECT_POSE.value:
         response = None
         object_name = message
@@ -28,18 +37,25 @@ def robot_execute(task, message=None):
                 break
         if response is None:
             response = "Object pose could not be estimated."
+
     elif task == Task.GET_OBJECT_POSES.value:
         object_name = message
         response = get_object_poses()
+
     elif task == Task.PLACE_OBJECT.value:
         coords = tuple(message)
         #TODO: Implement robot arm movement
         response = "success"
+
     elif task == Task.PICK_OBJECT.value:
         object_name = message
-        #grasp_info = get_best_top_grasp(object_name)
-        #TODO: Implement robot arm movement
-        response = "success"
+        object_info = OBJECT_INFO.get(object_name, None)
+        if object_info is None:
+            return f"Object {object_name} not found in dataset."
+        
+        pick_success = pick_object(object_info)
+        
+        response = "success" if pick_success else f"Failed to pick {object_name}."
     else:
         response = "Unknown task"
 

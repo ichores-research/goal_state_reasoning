@@ -24,7 +24,7 @@ else:
 
 if os.environ.get("TEST_RUN") != "TRUE":
     import rospy
-    from ros_object_detections import parse_scene_for_placing
+    from object_detection import parse_scene_for_placing
 
 
 

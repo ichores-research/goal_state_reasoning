@@ -24,7 +24,7 @@ from placing_reasoner import PlaceReasoner
 from langchain_ollama.llms import OllamaLLM
 from callbacks import AgentCallbackHandler
 import rospy
-from ros_object_detections import parse_scene_for_placing, get_object_pose
+from ros_object_detection import parse_scene_for_placing, get_object_pose
 
 
 

@@ -10,16 +10,21 @@ TABLE_HEURISTIC = {
 
 
 
-def load_grasp_annotations(folder_path, yaml_file_path):
-    with open(yaml_file_path, 'r') as yaml_file:
-        yaml_data = yaml.safe_load(yaml_file)
+def load_grasp_annotations(grasp_data_dir, config_file_path):
+    """
+    Load grasp annotations from a directory and a configuration file.
+    Config yaml file contains object names and their IDs.
+    """
+
+    with open(config_file_path, 'r') as config_file:
+        config_data = yaml.safe_load(config_file)
     
-    names = yaml_data.get('names', {})
+    names = config_data.get('names', {})
     grasp_annotations = {}
 
     for obj_id, obj_name in names.items():
         filename = f"obj_{int(obj_id):06d}.npy"
-        file_path = os.path.join(folder_path, filename)
+        file_path = os.path.join(grasp_data_dir, filename)
         if os.path.exists(file_path):
             grasps = np.load(file_path)
             grasp_annotations[obj_name] = {'grasps': grasps}
@@ -27,6 +32,11 @@ def load_grasp_annotations(folder_path, yaml_file_path):
 
 
 def get_ycb_objects_info(dataset):
+    """
+    Load YCB objects information including their IDs, diameters, grasps, and mesh paths.
+    The dataset parameter specifies the dataset to load (ycb_ichores or ycbv)
+    """
+
     with open(f"../config/{dataset}.yaml", 'r') as file:
         id_to_name = yaml.safe_load(file)["names"]
         name_to_id = {v: k for k, v in id_to_name.items()}
@@ -44,7 +54,8 @@ def get_ycb_objects_info(dataset):
         name  : {
             "id" : id, 
             "diameter": diameters[id], 
-            "grasps": grasp_annotations.get(name, None)['grasps']
+            "grasps": grasp_annotations.get(name, None)['grasps'],
+            "mesh_path": f"datasets/{dataset}/models/obj_{int(id):06d}.ply"
         } for name, id in name_to_id.items()
     }
     return objects_info

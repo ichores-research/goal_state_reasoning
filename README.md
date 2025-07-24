@@ -69,12 +69,9 @@ docker compose logs -f goal_state_reasoning
 To call LLM reasoner service open another terminal and run:
 ```bash
 docker-compose exec goal_state_reasoning bash
-
-#inside container
-source catkin_ws/devel/setup.bash
-rosservice call /LLM_plan_and_exec "command: '<your command>'
 ```
 
+#inside container
 **Important notice:** if service returns `success: True` it doesn't mean the agent was able to perform given action. Please check the logs to find out. `success: False` means the agent could not run correctly and returned an error during execution.
 
 #### Option2: run python script
@@ -114,7 +111,7 @@ docker-compose exec goal_state_reasoning bash
 source catkin_ws/devel/setup.bash
 cd goal_state_reasoning
 
-python ros_object_detection.py
+python object_detection.py
 ```
 
 
