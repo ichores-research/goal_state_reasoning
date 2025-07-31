@@ -2,13 +2,14 @@
 
 import numpy as np
 from motion_msgs.srv import Prepare, Pick, PickRequest, PrepareRequest
-from geometry_msgs.msg import Pose, PoseArray, Point32
+from geometry_msgs.msg import Pose, PoseArray, Point32, PoseStamped
 import rospy
 from shape_msgs.msg import Mesh
 
 import open3d as o3d
 from shape_msgs.msg import Mesh, MeshTriangle
 import tf.transformations as tft
+import tf
 
 
 def transform_grasp_obj2world(grasps, pose):
@@ -85,7 +86,7 @@ def ndarray_to_pose_array(poses):
 
 
 
-def pick_object(mesh_path: str, grasps: np.ndarray, pose: Pose):
+def pick_object(mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
     prepare_service = rospy.ServiceProxy('/motion/prepare', Prepare)
     pick_service = rospy.ServiceProxy('/motion/pick', Pick)
     rospy.wait_for_service('/motion/prepare')
@@ -121,3 +122,91 @@ def pick_object(mesh_path: str, grasps: np.ndarray, pose: Pose):
         print(f"Pick service response: {response.success}, {response.message}")
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+
+def test_pick(objects_info):
+    
+
+
+    listener = tf.TransformListener()
+    listener.waitForTransform("xtion_rgb_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
+
+
+    detections = detect_objects()
+    if len(detections) == 0:
+        print("No objects detected.")
+        return
+
+    for detection in detections:
+        if detection.name == "011_banana":
+            break
+
+    pose_gdrnpp = get_object_pose(detection.name)
+    if pose_gdrnpp is  None:
+        print("Could not estimate object pose.")
+        return
+
+
+    pose_in_head = PoseStamped() #parsing to pose stamped
+    pose_in_head.header.frame_id = "xtion_rgb_optical_frame"
+    pose_in_head.header.stamp = rospy.Time(0)  # latest available
+
+    pose_in_head.pose.position = pose_gdrnpp.pose.position
+    pose_in_head.pose.orientation = pose_gdrnpp.pose.orientation
+
+    print("Detected ", detection.name)
+    print(f"At position :{round( pose_in_head.pose.position.x,2)}, {round(pose_in_head.pose.position.y,2)}, {round(pose_in_head.pose.position.z,2)}")
+
+
+
+    try:
+        pose_in_base = listener.transformPose("base_footprint", pose_in_head)
+        print("Transformed pose:")
+        print("Position:", pose_in_base.pose.position)
+        print("Orientation:", pose_in_base.pose.orientation)
+        
+    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+        print("Transform of the pose to base footprint failed.")
+        return
+
+
+    print("Attempting to pick...")
+
+    object_info = objects_info.get(detection.name, None)
+    if object_info is None:
+        print(f"Object {object_name} not found in dataset.")
+        return
+    
+    # objects are slightly incorporated in the table plane,
+    # so this is moving them slightly higher
+    pose_in_base.pose.position.z +=0
+
+    pick_success = pick_object(
+        mesh_path=object_info["mesh_path"],
+        grasps = object_info["grasps"],
+        pose=pose_in_base.pose
+
+        )
+    
+    message = f"Picked {detection.name}!" if pick_success else f"Failed to pick {detection.name}"
+    print(message)
+    return
+    
+    
+
+if __name__=="__main__":
+    rospy.init_node('pick_and_place_test_node')
+
+    import os
+    from ycb_objects import get_ycb_objects_info
+    from object_detection import *
+    DATASET = os.environ.get("DATASET", "ycb_ichores")
+    OBJECTS_INFO = get_ycb_objects_info(DATASET)
+    try:
+        test_pick(OBJECTS_INFO)
+
+    except rospy.ROSInterruptException:
+        pass
+    except KeyboardInterrupt:
+        pass
