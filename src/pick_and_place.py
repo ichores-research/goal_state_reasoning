@@ -85,27 +85,30 @@ def ndarray_to_pose_array(poses):
     return pose_array
 
 
-
-def pick_object(mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
+def prepare_robot():
     prepare_service = rospy.ServiceProxy('/motion/prepare', Prepare)
-    pick_service = rospy.ServiceProxy('/motion/pick', Pick)
     rospy.wait_for_service('/motion/prepare')
-    rospy.wait_for_service('/motion/pick')
-
+    
     # Prepare the robot for picking
     try:
         prepare_service(PrepareRequest())
     except rospy.ServiceException as e:
         print(f"Motion prepare call failed: {e}")
-        return
+        return False
+
+
+def pick_object(mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
     
+    pick_service = rospy.ServiceProxy('/motion/pick', Pick)
+    rospy.wait_for_service('/motion/pick')
+
     try:
         try:
             mesh = o3d.io.read_triangle_mesh(mesh_path)
             mesh_msg = o3d_to_shape_mesh(mesh)
         except Exception as e:
             print(f"Failed to read mesh from {mesh_path}: {e}")
-            return
+            return False
 
         grasps_transformed = transform_grasp_obj2world(grasps, pose)
         pose_array = ndarray_to_pose_array(grasps_transformed)
@@ -120,14 +123,31 @@ def pick_object(mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
         # Call the pick service
         response = pick_service(pick_req)
         print(f"Pick service response: {response.success}, {response.message}")
+
+        return response.success
     except Exception as e:
         print(f"An error occurred: {e}")
+        return False
 
 
 
 def test_pick(objects_info):
+    """
+    Test the pick and place functionality.
+    Picks an apple from the table in front of the robot.
+    1. Prepares the robot
+    2. Detects objects on the table
+    3. Picks the apple
+    4. Reports success or failure
+    5. Retries up to 10 times if picking fails
+    6. Prints the result
+    """
     
-
+    # First prepare the robot
+    preparation_success = prepare_robot()
+    if not preparation_success:
+        print("Robot preparation failed.")
+        return
 
     listener = tf.TransformListener()
     listener.waitForTransform("xtion_rgb_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
@@ -139,7 +159,7 @@ def test_pick(objects_info):
         return
 
     for detection in detections:
-        if detection.name == "011_banana":
+        if detection.name == "013_apple":
             break
 
     pose_gdrnpp = get_object_pose(detection.name)
@@ -175,19 +195,26 @@ def test_pick(objects_info):
 
     object_info = objects_info.get(detection.name, None)
     if object_info is None:
-        print(f"Object {object_name} not found in dataset.")
+        print(f"Object {detection.name} not found in dataset.")
         return
     
     # objects are slightly incorporated in the table plane,
     # so this is moving them slightly higher
-    pose_in_base.pose.position.z +=0
+    pose_in_base.pose.position.z += 0.04
 
-    pick_success = pick_object(
-        mesh_path=object_info["mesh_path"],
-        grasps = object_info["grasps"],
-        pose=pose_in_base.pose
+    pick_success = False
+    count = 10
+    while not pick_success:
+        print("\tAttempts left ", count)
+        pick_success = pick_object(
+            mesh_path=object_info["mesh_path"],
+            grasps = object_info["grasps"],
+            pose=pose_in_base.pose
 
-        )
+            )
+        count -= 1
+        if count == 0:
+            break
     
     message = f"Picked {detection.name}!" if pick_success else f"Failed to pick {detection.name}"
     print(message)
