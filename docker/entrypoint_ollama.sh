@@ -9,8 +9,15 @@ cd /root/catkin_ws/src
 source /root/catkin_ws/devel/setup.bash
 rosparam load /root/config/${CONFIG} /pose_estimator;
 
+# Serve ollama
+echo "Going to serve ollama"
+ollama serve &
+echo "Served ollama"
+
 # Pull ollama model
-ollama pull llama3:70b
+echo "Going to pull"
+sleep 10 && ollama pull llama3:8b # TODO: CHEAP FIX, MAKE THIS RIGHT.
+echo "Pulled model"
 
 # Run LLM agent service
 cd /root/goal_state_reasoning

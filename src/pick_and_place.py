@@ -2,7 +2,7 @@
 
 import numpy as np
 from motion_msgs.srv import Prepare, Pick, PickRequest, PrepareRequest
-from geometry_msgs.msg import Pose, PoseArray, Point32, PoseStamped
+from geometry_msgs.msg import Pose, PoseArray, Point32, PoseStamped, #Twist 
 import rospy
 from shape_msgs.msg import Mesh
 
@@ -10,6 +10,18 @@ import open3d as o3d
 from shape_msgs.msg import Mesh, MeshTriangle
 import tf.transformations as tft
 import tf
+
+# import time
+
+# pub = rospy.Publisher('robot_wiggler', Twist, queue_size=10)
+# vel_cmd = Twist()
+# vel_cmd.linear.x = 0.05
+# vel_cmd.angular.z = 0.01
+# t0 = time.time()
+
+# while time.time()-t0<0.2:
+#     pub.publish (vel_cmd)
+# pub.publish(Twist())
 
 
 def transform_grasp_obj2world(grasps, pose):
@@ -92,6 +104,7 @@ def prepare_robot():
     # Prepare the robot for picking
     try:
         prepare_service(PrepareRequest())
+        return True
     except rospy.ServiceException as e:
         print(f"Motion prepare call failed: {e}")
         return False
@@ -145,6 +158,7 @@ def test_pick(objects_info):
     
     # First prepare the robot
     preparation_success = prepare_robot()
+    print(f"Preparation success {preparation_success}") # TODO: This currently prints "None" and claims the preparation was unsuccesful
     if not preparation_success:
         print("Robot preparation failed.")
         return

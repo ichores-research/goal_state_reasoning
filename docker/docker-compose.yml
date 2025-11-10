@@ -9,6 +9,7 @@ services:
     network_mode: "host"
     runtime: "nvidia"
     volumes:
+      - ./models:/root/.ollama/models:rw
       - /dev/bus/usb:/dev/bus/usb
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../src:/root/goal_state_reasoning
