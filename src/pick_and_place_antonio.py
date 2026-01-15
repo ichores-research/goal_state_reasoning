@@ -10,6 +10,13 @@ import open3d as o3d
 from shape_msgs.msg import Mesh, MeshTriangle
 import tf.transformations as tft
 import tf
+import tf2_ros
+import tf2_geometry_msgs
+
+import os
+from ycb_objects import get_ycb_objects_info
+from object_detection import *
+import threading
 
 # import time
 
@@ -22,6 +29,26 @@ import tf
 # while time.time()-t0<0.2:
 #     pub.publish (vel_cmd)
 # pub.publish(Twist())
+
+stop_publishing_tf = threading.Event()
+
+
+def object_pose_tf_publisher(object_pose, object_name = "detected_object", parent_frame = "parent_tf"):
+    rospy.sleep(2.0)
+    br = tf.TransformBroadcaster()
+    rate = rospy.Rate(30)
+    while not stop_publishing_tf.is_set() and not rospy.is_shutdown():
+        br.sendTransform([object_pose.position.x, 
+	                      object_pose.position.y,
+	                      object_pose.position.z],
+	                      [object_pose.orientation.x, 
+	                       object_pose.orientation.y,
+	                       object_pose.orientation.z,
+	                       object_pose.orientation.w], 
+	                       rospy.Time.now(), 
+	                       object_name, 
+	                       parent_frame)
+        rate.sleep()
 
 
 def transform_grasp_obj2world(grasps, pose):
@@ -46,7 +73,6 @@ def transform_grasp_obj2world(grasps, pose):
         transformed_grasps.append(transformed_grasp_matrix.flatten())
 
     return np.array(transformed_grasps)
-
 
 
 def o3d_to_shape_mesh(model):
@@ -75,6 +101,26 @@ def o3d_to_shape_mesh(model):
 
     return mesh_msg
 
+
+def solve_offset_goal(goal_pose_world, ee_link, extra_tf):
+    """
+    goal_pose_world: PoseStamped of where you want the tool to end up.
+    ee_link: String name of your MoveIt EE (e.g., 'hand_link').
+    extra_tf: String name of the arbitrary TF.
+    """
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    rospy.sleep(0.1) 
+
+    try:
+        offset = tf_buffer.lookup_transform(extra_tf, ee_link, rospy.Time(0), rospy.Duration(1.0))        
+        fooled_pose = tf2_geometry_msgs.do_transform_pose(goal_pose_world, offset)
+        return fooled_pose
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None    
+    
 
 def ndarray_to_pose_array(poses):
     pose_array = PoseArray()
@@ -167,22 +213,27 @@ def test_pick(objects_info):
     5. Retries up to 10 times if picking fails
     6. Prints the result
     """
+    print("Hello, starting pick up test")
+    if stop_publishing_tf.is_set():
+        stop_publishing_tf.clear()
     
     # First prepare the robot
-    preparation_success = prepare_robot()
+    move_2_prepare_pose = bool(input("Insert 1 if you want to move the arm to the prepare pose, 0 otherwise. "))
+    if move_2_prepare_pose:
+        preparation_success = prepare_robot()
+    
     print(f"Preparation submit success {preparation_success}") # TODO: This currently prints "None" and claims the preparation was unsuccesful
     if not preparation_success:
         print("Robot preparation failed.")
         return
 
     input("Press enter to continue with transform:")
-
+    
     listener = tf.TransformListener()
     print(f"{listener}")
-    wait_success = listener.waitForTransform("xtion_rgb_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
+    wait_success = listener.waitForTransform("xtion_depth_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
     print(f"wait success = {wait_success}")
     print("waiting done.")
-
 
     input("Press enter to detect objections:")
 
@@ -193,28 +244,29 @@ def test_pick(objects_info):
 
     print(f"Detected {detections}")
 
-    # TODO: This is horribly wrong !!!
-    for detection in detections:
-        if detection.name == "013_apple":
-            break
+#    # TODO: This is horribly wrong !!!
+#    for detection in detections:
+#        if detection.name == "013_apple":
+#            break
+            
+    pose_gdrnpp = get_object_pose(detections[0].name)
 
-    pose_gdrnpp = get_object_pose(detection.name)
+    print(pose_gdrnpp)
+    
     if pose_gdrnpp is  None:
         print("Could not estimate object pose.")
         return
 
     pose_in_head = PoseStamped() #parsing to pose stamped
-    pose_in_head.header.frame_id = "xtion_rgb_optical_frame"
+    pose_in_head.header.frame_id = "xtion_depth_optical_frame"
     pose_in_head.header.stamp = rospy.Time(0)  # latest available
 
     pose_in_head.pose.position = pose_gdrnpp.pose.position
     pose_in_head.pose.orientation = pose_gdrnpp.pose.orientation
 
-    print("Detected ", detection.name)
+    #print("Detected ", detections[0].name)
     print(f"At position :{round( pose_in_head.pose.position.x,2)}, {round(pose_in_head.pose.position.y,2)}, {round(pose_in_head.pose.position.z,2)}")
-
-
-
+        
     try:
         pose_in_base = listener.transformPose("base_footprint", pose_in_head)
         print("Transformed pose:")
@@ -224,11 +276,19 @@ def test_pick(objects_info):
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         print("Transform of the pose to base footprint failed.")
         return
-
-
+        
     print("Attempting to pick...")
 
-    object_info = objects_info.get(detection.name, None)
+    arguments = (pose_in_base.pose, detections[0].name, "base_footprint")
+    tf_publisher_thread = threading.Thread(target = object_pose_tf_publisher, args = arguments)
+    tf_publisher_thread.start()
+
+    arguments2 = (solve_offset_goal(pose_in_base,"gripper_link", "gripper_fingertips_frame").pose, detections[0].name+"_offset", "base_footprint")
+    tf_publisher_thread2 = threading.Thread(target = object_pose_tf_publisher, args = arguments2)
+    tf_publisher_thread2.start()
+
+
+    object_info = objects_info.get(detections[0].name, None)
     if object_info is None:
         print(f"Object {detection.name} not found in dataset.")
         return
@@ -239,34 +299,35 @@ def test_pick(objects_info):
 
     pick_success = False
     count = 10
-    while not pick_success:
+    print (f"\n\n\n\nShape of the grasp array is: {object_info['grasps'].shape}\n\n\n\n")
+    
+    filtered_grasps = object_info["grasps"] #np.array([grasp for grasp in object_info["grasps"] if grasp[0][11]<0])
+    pick_counter = 0 
+    while not pick_success or pick_counter < filtered_grasps.shape[0]:
         print("\tAttempts left ", count)
+        print(f"Attempting grasp index {pick_counter}")
         index = int(input("Enter the grasp you want to try: "))
         pick_success = pick_object(
             index,
             mesh_path=object_info["mesh_path"],
             grasps = object_info["grasps"],
-            pose=pose_in_base.pose
-
+            pose= pose_in_base.pose  #solve_offset_goal(pose_in_base,"gripper_link", "gripper_fingertips_frame").pose #pose_in_base.pose 
             )
         count -= 1
+        pick_counter += 1
         if count == 0:
             break
-
+            
         input(f"Press enter to try again: ")
     
-    message = f"Picked {detection.name}!" if pick_success else f"Failed to pick {detection.name}"
+    message = f"Picked!" if pick_success else f"Failed to pick"
     print(message)
     return
     
     
-
 if __name__=="__main__":
     rospy.init_node('pick_and_place_test_node')
 
-    import os
-    from ycb_objects import get_ycb_objects_info
-    from object_detection import *
     DATASET = os.environ.get("DATASET", "ycb_ichores")
     OBJECTS_INFO = get_ycb_objects_info(DATASET)
     try:
