@@ -156,7 +156,7 @@ def prepare_robot():
         return False
 
 
-def pick_object(index: int, mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
+def pick_object_with_grasp(index: int, mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
     
     pick_service = rospy.ServiceProxy('/motion/pick', Pick)
     rospy.wait_for_service('/motion/pick')
@@ -200,6 +200,96 @@ def pick_object(index: int, mesh_path: str, grasps: np.ndarray, pose: Pose, **kw
         print(f"An error occurred: {e}")
         return False
 
+
+def pick_object_by_info(object_info: dict, object_name: str = None):
+    if object_info is None:
+        rospy.logwarn("pick_object_by_info: object_info is None")
+        return False
+    
+    if "mesh_path" not in object_info or "grasps" not in object_info:
+        rospy.logwarn(f"pick_object_by_info: object_info missing required keys. Got: {list(object_info.keys())}")
+        return False
+    
+    # If object_name not provided, try to detect it from the scene
+    if object_name is None:
+        detections = detect_objects()
+        if len(detections) == 0:
+            rospy.logwarn("pick_object_by_info: No objects detected in scene and object_name not provided")
+            return False
+        # Use first detected object - in agent context, this should be the target
+        object_name = detections[0].name
+        rospy.loginfo(f"pick_object_by_info: Using detected object: {object_name}")
+    
+    # Get object pose from detection
+    pose_gdrnpp = get_object_pose(object_name)
+    if pose_gdrnpp is None:
+        rospy.logwarn(f"pick_object_by_info: Could not estimate pose for {object_name}")
+        return False
+    
+    # Transform pose to base_footprint frame
+    listener = tf.TransformListener()
+    try:
+        wait_success = listener.waitForTransform("xtion_depth_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
+        if not wait_success:
+            rospy.logwarn("pick_object_by_info: Transform wait failed")
+            return False
+        
+        pose_in_head = PoseStamped()
+        pose_in_head.header.frame_id = "xtion_depth_optical_frame"
+        pose_in_head.header.stamp = rospy.Time(0)
+        pose_in_head.pose.position = pose_gdrnpp.pose.position
+        pose_in_head.pose.orientation = pose_gdrnpp.pose.orientation
+        
+        pose_in_base = listener.transformPose("base_footprint", pose_in_head)
+        
+    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+        rospy.logwarn(f"pick_object_by_info: Transform failed: {e}")
+        return False
+    
+    # Objects are slightly incorporated in the table plane, so move them slightly higher
+    pose_in_base.pose.position.z += 0.04
+    
+    # Start TF publisher threads for visualization (optional, but helps with debugging)
+    if stop_publishing_tf.is_set():
+        stop_publishing_tf.clear()
+    
+    arguments = (pose_in_base.pose, object_name, "base_footprint")
+    tf_publisher_thread = threading.Thread(target=object_pose_tf_publisher, args=arguments)
+    tf_publisher_thread.start()
+    
+    # Try multiple grasps automatically (up to 5 or all available)
+    grasps = object_info["grasps"]
+    max_attempts = min(len(grasps), 5)
+    
+    rospy.loginfo(f"pick_object_by_info: Attempting to pick {object_name} with {max_attempts} grasp attempts")
+    
+    for grasp_idx in range(max_attempts):
+        rospy.loginfo(f"pick_object_by_info: Trying grasp {grasp_idx + 1}/{max_attempts}")
+        success = pick_object_with_grasp(
+            index=grasp_idx,
+            mesh_path=object_info["mesh_path"],
+            grasps=grasps,
+            pose=pose_in_base.pose
+        )
+        if success:
+            rospy.loginfo(f"pick_object_by_info: Successfully picked {object_name} with grasp {grasp_idx}")
+            # Stop TF publisher threads
+            stop_publishing_tf.set()
+            if tf_publisher_thread.is_alive():
+                tf_publisher_thread.join(timeout=2.0)
+            return True
+    
+    # All grasps failed
+    rospy.logwarn(f"pick_object_by_info: Failed to pick {object_name} after {max_attempts} attempts")
+    # Stop TF publisher threads
+    stop_publishing_tf.set()
+    if tf_publisher_thread.is_alive():
+        tf_publisher_thread.join(timeout=2.0)
+    return False
+
+
+def pick_object(object_info: dict, object_name: str = None):
+    return pick_object_by_info(object_info, object_name=object_name)
 
 
 def test_pick(objects_info):
@@ -307,7 +397,7 @@ def test_pick(objects_info):
         print("\tAttempts left ", count)
         print(f"Attempting grasp index {pick_counter}")
         index = int(input("Enter the grasp you want to try: "))
-        pick_success = pick_object(
+        pick_success = pick_object_with_grasp(
             index,
             mesh_path=object_info["mesh_path"],
             grasps = object_info["grasps"],
