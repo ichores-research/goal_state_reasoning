@@ -156,22 +156,10 @@ def prepare_robot():
         return False
 
 
-def pick_object_with_grasp(index: int, mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
+def pick_object_with_grasp(mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
     
     pick_service = rospy.ServiceProxy('/motion/pick', Pick)
     rospy.wait_for_service('/motion/pick')
-
-    print(type(grasps))
-    print(f"Grasps: {grasps}")
-    print("Filtering grasps")
-    filtered_grasps = []
-
-    for i, grasp in enumerate(grasps):
-        if i == index:
-            filtered_grasps.append(grasp)
-
-    filtered_grasps = np.array(filtered_grasps)
-    print(filtered_grasps)
 
     try:
         try:
@@ -181,7 +169,7 @@ def pick_object_with_grasp(index: int, mesh_path: str, grasps: np.ndarray, pose:
             print(f"Failed to read mesh from {mesh_path}: {e}")
             return False
 
-        grasps_transformed = transform_grasp_obj2world(filtered_grasps, pose)
+        grasps_transformed = transform_grasp_obj2world(grasps, pose)
         pose_array = ndarray_to_pose_array(grasps_transformed)
 
         # Create Pick message
@@ -206,19 +194,13 @@ def pick_object_by_info(object_info: dict, object_name: str = None):
         rospy.logwarn("pick_object_by_info: object_info is None")
         return False
     
+    if object_name is None:
+        rospy.logwarn("pick_object_by_info: object_name is None")
+        return False
+    
     if "mesh_path" not in object_info or "grasps" not in object_info:
         rospy.logwarn(f"pick_object_by_info: object_info missing required keys. Got: {list(object_info.keys())}")
         return False
-    
-    # If object_name not provided, try to detect it from the scene
-    if object_name is None:
-        detections = detect_objects()
-        if len(detections) == 0:
-            rospy.logwarn("pick_object_by_info: No objects detected in scene and object_name not provided")
-            return False
-        # Use first detected object - in agent context, this should be the target
-        object_name = detections[0].name
-        rospy.loginfo(f"pick_object_by_info: Using detected object: {object_name}")
     
     # Get object pose from detection
     pose_gdrnpp = get_object_pose(object_name)
@@ -229,10 +211,7 @@ def pick_object_by_info(object_info: dict, object_name: str = None):
     # Transform pose to base_footprint frame
     listener = tf.TransformListener()
     try:
-        wait_success = listener.waitForTransform("xtion_depth_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
-        if not wait_success:
-            rospy.logwarn("pick_object_by_info: Transform wait failed")
-            return False
+        listener.waitForTransform("xtion_depth_optical_frame", "base_footprint", rospy.Time(), rospy.Duration(4.0))
         
         pose_in_head = PoseStamped()
         pose_in_head.header.frame_id = "xtion_depth_optical_frame"
@@ -264,9 +243,8 @@ def pick_object_by_info(object_info: dict, object_name: str = None):
     rospy.loginfo(f"pick_object_by_info: Attempting to pick {object_name} with {max_attempts} grasp attempts")
     
     for grasp_idx in range(max_attempts):
-        rospy.loginfo(f"pick_object_by_info: Trying grasp {grasp_idx + 1}/{max_attempts}")
+        rospy.loginfo(f"pick_object_by_info: Attempting to pick {object_name} with {max_attempts} grasp attempts")
         success = pick_object_with_grasp(
-            index=grasp_idx,
             mesh_path=object_info["mesh_path"],
             grasps=grasps,
             pose=pose_in_base.pose
@@ -334,12 +312,10 @@ def test_pick(objects_info):
 
     print(f"Detected {detections}")
 
-#    # TODO: This is horribly wrong !!!
-#    for detection in detections:
-#        if detection.name == "013_apple":
-#            break
+    detection = detections[0]
+    rospy.loginfo(f"Working with detection = {detection.name}")
             
-    pose_gdrnpp = get_object_pose(detections[0].name)
+    pose_gdrnpp = get_object_pose(detection.name)
 
     print(pose_gdrnpp)
     
@@ -373,11 +349,6 @@ def test_pick(objects_info):
     tf_publisher_thread = threading.Thread(target = object_pose_tf_publisher, args = arguments)
     tf_publisher_thread.start()
 
-    arguments2 = (solve_offset_goal(pose_in_base,"gripper_link", "gripper_fingertips_frame").pose, detections[0].name+"_offset", "base_footprint")
-    tf_publisher_thread2 = threading.Thread(target = object_pose_tf_publisher, args = arguments2)
-    tf_publisher_thread2.start()
-
-
     object_info = objects_info.get(detections[0].name, None)
     if object_info is None:
         print(f"Object {detection.name} not found in dataset.")
@@ -398,7 +369,6 @@ def test_pick(objects_info):
         print(f"Attempting grasp index {pick_counter}")
         index = int(input("Enter the grasp you want to try: "))
         pick_success = pick_object_with_grasp(
-            index,
             mesh_path=object_info["mesh_path"],
             grasps = object_info["grasps"],
             pose= pose_in_base.pose  #solve_offset_goal(pose_in_base,"gripper_link", "gripper_fingertips_frame").pose #pose_in_base.pose 
