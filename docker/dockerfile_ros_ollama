@@ -1,9 +1,9 @@
-FROM ubuntu:20.04
+FROM nvidia/cuda:11.8.0-base-ubuntu20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get install -y \
-	python3-opencv ca-certificates python3-dev python3-pip git wget sudo ninja-build
+	python3-opencv ca-certificates python3-dev python3-pip git wget sudo ninja-build zstd
 RUN ln -sv /usr/bin/python3 /usr/bin/python
 
 
