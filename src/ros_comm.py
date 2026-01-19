@@ -3,7 +3,7 @@ import rospy
 import enum
 from object_detection import *
 from ycb_objects import get_ycb_objects_info
-from pick_and_place import pick_object
+from pick_and_place_antonio import pick_object, prepare_robot
 
 
 DATASET = os.environ.get("DATASET", "ycb_ichores")
@@ -53,7 +53,7 @@ def robot_execute(task, message=None):
         if object_info is None:
             return f"Object {object_name} not found in dataset."
         
-        pick_success = pick_object(object_info)
+        pick_success = pick_object(object_info, object_name)
         
         response = "success" if pick_success else f"Failed to pick {object_name}."
     else:
