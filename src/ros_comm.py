@@ -53,6 +53,7 @@ def robot_execute(task, message=None):
         if object_info is None:
             return f"Object {object_name} not found in dataset."
         
+        prepare_robot()
         pick_success = pick_object(object_info, object_name)
         
         response = "success" if pick_success else f"Failed to pick {object_name}."
