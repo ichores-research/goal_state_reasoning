@@ -77,7 +77,7 @@ class Agent():
             )
         else:
             self.llm = OllamaLLM(
-                model="llama3:8b",
+                model="llama3.1:70b",
                 temperature=0,
                 stop=["\nObservation", "Observation"],
                 callbacks=[AgentCallbackHandler()],

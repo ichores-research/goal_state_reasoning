@@ -139,7 +139,7 @@ if __name__ == "__main__":
     if os.environ.get("MODEL_HOST") == "ollama":
         reasoner = PlaceReasoner(
             OllamaLLM(
-                model="llama3:8b",
+                model="llama3.1:70b",
                 temperature=0,
                 stop=["\nObservation", "Observation"],
                 callbacks=[AgentCallbackHandler()],

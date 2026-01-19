@@ -16,7 +16,7 @@ echo "Served ollama"
 
 # Pull ollama model
 echo "Going to pull"
-sleep 10 && ollama pull llama3:8b # TODO: CHEAP FIX, MAKE THIS RIGHT.
+sleep 10 && ollama pull llama3.1:70b # TODO: CHEAP FIX, MAKE THIS RIGHT.
 echo "Pulled model"
 
 # Run LLM agent service
