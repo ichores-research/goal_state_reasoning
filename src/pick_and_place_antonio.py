@@ -102,26 +102,6 @@ def o3d_to_shape_mesh(model):
     return mesh_msg
 
 
-def solve_offset_goal(goal_pose_world, ee_link, extra_tf):
-    """
-    goal_pose_world: PoseStamped of where you want the tool to end up.
-    ee_link: String name of your MoveIt EE (e.g., 'hand_link').
-    extra_tf: String name of the arbitrary TF.
-    """
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
-    rospy.sleep(0.1) 
-
-    try:
-        offset = tf_buffer.lookup_transform(extra_tf, ee_link, rospy.Time(0), rospy.Duration(1.0))        
-        fooled_pose = tf2_geometry_msgs.do_transform_pose(goal_pose_world, offset)
-        return fooled_pose
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return None    
-    
-
 def ndarray_to_pose_array(poses):
     pose_array = PoseArray()
     align_x_to_z = tft.quaternion_from_euler(0, np.pi / 2, 0)
@@ -331,7 +311,7 @@ def test_pick(objects_info):
     pose_in_head.pose.orientation = pose_gdrnpp.pose.orientation
 
     #print("Detected ", detections[0].name)
-    print(f"At position :{round( pose_in_head.pose.position.x,2)}, {round(pose_in_head.pose.position.y,2)}, {round(pose_in_head.pose.position.z,2)}")
+    #print(f"At position :{round( pose_in_head.pose.position.x,2)}, {round(pose_in_head.pose.position.y,2)}, {round(pose_in_head.pose.position.z,2)}")
         
     try:
         pose_in_base = listener.transformPose("base_footprint", pose_in_head)
@@ -348,6 +328,10 @@ def test_pick(objects_info):
     arguments = (pose_in_base.pose, detections[0].name, "base_footprint")
     tf_publisher_thread = threading.Thread(target = object_pose_tf_publisher, args = arguments)
     tf_publisher_thread.start()
+
+    arguments2 = (pose_in_base.pose, f"pose_{detections[0].name}", "base_footprint")
+    tf_publisher_thread2 = threading.Thread(target = object_pose_tf_publisher, args = arguments2)
+    tf_publisher_thread2.start()
 
     object_info = objects_info.get(detections[0].name, None)
     if object_info is None:
@@ -371,7 +355,7 @@ def test_pick(objects_info):
         pick_success = pick_object_with_grasp(
             mesh_path=object_info["mesh_path"],
             grasps = object_info["grasps"],
-            pose= pose_in_base.pose  #solve_offset_goal(pose_in_base,"gripper_link", "gripper_fingertips_frame").pose #pose_in_base.pose 
+            pose= pose_in_base.pose  
             )
         count -= 1
         pick_counter += 1
