@@ -2,6 +2,9 @@
 
 import numpy as np
 from motion_msgs.srv import Prepare, Pick, PickRequest, PrepareRequest
+from motion_msgs.srv import Pick as Place
+from motion_msgs.srv import PickRequest as PlaceRequest
+from std_srvs.srv import SetBool, SetBoolRequest
 from geometry_msgs.msg import Pose, PoseArray, Point32, PoseStamped #, Twist 
 import rospy
 from shape_msgs.msg import Mesh
@@ -136,6 +139,91 @@ def prepare_robot():
         return False
 
 
+def reset_planning_scene():
+    prepare_service = rospy.ServiceProxy('/motion/reset_planning_scene', SetBool)
+    rospy.wait_for_service('/motion/reset_planning_scene')
+    
+    # Prepare the robot for picking
+    try:
+        prepare_service(SetBoolRequest(data=True))
+        return True
+    except rospy.ServiceException as e:
+        print(f"Planning scene reset call failed due to: {e}")
+        return False
+
+def pick_object(index: int, mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
+    
+    pick_service = rospy.ServiceProxy('/motion/pick', Pick)
+    rospy.wait_for_service('/motion/pick')
+
+    print(type(grasps))
+    print(f"Grasps: {grasps}")
+    print("Filtering grasps")
+    filtered_grasps = []
+
+    for i, grasp in enumerate(grasps):
+        if i == index:
+            filtered_grasps.append(grasp)
+
+    filtered_grasps = np.array(filtered_grasps)
+    print(filtered_grasps)
+
+    try:
+        try:
+            mesh = o3d.io.read_triangle_mesh(mesh_path)
+            mesh_msg = o3d_to_shape_mesh(mesh)
+        except Exception as e:
+            print(f"Failed to read mesh from {mesh_path}: {e}")
+            return False
+
+        grasps_transformed = transform_grasp_obj2world(filtered_grasps, pose)
+        pose_array = ndarray_to_pose_array(grasps_transformed)
+
+        # Create Pick message
+        pick_req = PickRequest()
+        pick_req.object_mesh = mesh_msg
+        pick_req.object_pose = pose
+        pick_req.grasps = pose_array
+        
+
+        # Call the pick service
+        response = pick_service(pick_req)
+        print(f"Pick service response: {response.success}, {response.message}")
+
+        place_service = rospy.ServiceProxy('/motion/place', Pick)
+        rospy.wait_for_service('/motion/place')    
+
+        response = place_service(pick_req)
+        print(f"Pick service response: {response.success}, {response.message}")
+
+        return response.success
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+def place_object(pose: Pose, mesh_path: str, **kwargs):
+
+    place_service = rospy.ServiceProxy('/motion/place', Place)
+    rospy.wait_for_service('/motion/place')    
+    
+    place_req = PlaceRequest()
+    try:
+        try:
+            mesh = o3d.io.read_triangle_mesh(mesh_path)
+            mesh_msg = o3d_to_shape_mesh(mesh)
+            place_req.object_mesh = mesh_msg
+        except Exception as e:
+            rospy.logerr(f"Failed to read mesh from {mesh_path}: {e}")
+
+        place_req.object_pose = pose
+        response = place_service(place_req)
+        print(f"Pick service response: {response.success}, {response.message}")
+        return response.success
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
 def pick_object_with_grasp(mesh_path: str, grasps: np.ndarray, pose: Pose, **kwargs):
     
     pick_service = rospy.ServiceProxy('/motion/pick', Pick)
@@ -206,7 +294,7 @@ def pick_object_by_info(object_info: dict, object_name: str = None):
         return False
     
     # Objects are slightly incorporated in the table plane, so move them slightly higher
-    pose_in_base.pose.position.z += 0.04
+    pose_in_base.pose.position.z += 0.06
     
     # Start TF publisher threads for visualization (optional, but helps with debugging)
     if stop_publishing_tf.is_set():
@@ -246,8 +334,8 @@ def pick_object_by_info(object_info: dict, object_name: str = None):
     return False
 
 
-def pick_object(object_info: dict, object_name: str = None):
-    return pick_object_by_info(object_info, object_name=object_name)
+# def pick_object(object_info: dict, object_name: str = None):
+#     return pick_object_by_info(object_info, object_name=object_name)
 
 
 def test_pick(objects_info):
@@ -266,16 +354,16 @@ def test_pick(objects_info):
         stop_publishing_tf.clear()
     
     # First prepare the robot
-    move_2_prepare_pose = bool(input("Insert 1 if you want to move the arm to the prepare pose, 0 otherwise. "))
-    if move_2_prepare_pose:
-        preparation_success = prepare_robot()
+    # move_2_prepare_pose = bool(input("Insert 1 if you want to move the arm to the prepare pose, 0 otherwise. "))
+    # if move_2_prepare_pose:
+    preparation_success = prepare_robot()
     
-    print(f"Preparation submit success {preparation_success}") # TODO: This currently prints "None" and claims the preparation was unsuccesful
-    if not preparation_success:
-        print("Robot preparation failed.")
-        return
+    # print(f"Preparation submit success {preparation_success}") # TODO: This currently prints "None" and claims the preparation was unsuccesful
+    # if not preparation_success:
+    #     print("Robot preparation failed.")
+    #     return
 
-    input("Press enter to continue with transform:")
+    # input("Press enter to continue with transform:")
     
     listener = tf.TransformListener()
     print(f"{listener}")
@@ -283,7 +371,7 @@ def test_pick(objects_info):
     print(f"wait success = {wait_success}")
     print("waiting done.")
 
-    input("Press enter to detect objections:")
+    # input("Press enter to detect objections:")
 
     detections = detect_objects()
     if len(detections) == 0:
@@ -294,7 +382,17 @@ def test_pick(objects_info):
 
     detection = detections[0]
     rospy.loginfo(f"Working with detection = {detection.name}")
-            
+    if "banana" in detection.name:
+        rospy.set_param("/motion/closed_gripper_joint", 0.015)
+    elif "mustard" in detection.name:
+        rospy.set_param("/motion/closed_gripper_joint", 0.025)
+    elif "apple" in detection.name:
+        rospy.set_param("/motion/closed_gripper_joint", 0.03)
+    elif "mug" in detection.name:
+        rospy.set_param("/motion/closed_gripper_joint", 0.005)
+    else:
+        rospy.set_param("/motion/closed_gripper_joint", 0.025)
+        
     pose_gdrnpp = get_object_pose(detection.name)
 
     print(pose_gdrnpp)
@@ -340,7 +438,7 @@ def test_pick(objects_info):
     
     # objects are slightly incorporated in the table plane,
     # so this is moving them slightly higher
-    pose_in_base.pose.position.z += 0.04
+    pose_in_base.pose.position.z += 0.06
 
     pick_success = False
     count = 10
@@ -349,23 +447,35 @@ def test_pick(objects_info):
     filtered_grasps = object_info["grasps"] #np.array([grasp for grasp in object_info["grasps"] if grasp[0][11]<0])
     pick_counter = 0 
     while not pick_success or pick_counter < filtered_grasps.shape[0]:
+        pose_in_base.header.stamp = rospy.Time(0) 
         print("\tAttempts left ", count)
         print(f"Attempting grasp index {pick_counter}")
         index = int(input("Enter the grasp you want to try: "))
-        pick_success = pick_object_with_grasp(
+        
+        pick_success = pick_object(
+            index, 
             mesh_path=object_info["mesh_path"],
             grasps = object_info["grasps"],
             pose= pose_in_base.pose  
             )
+        reset_planning_scene()
         count -= 1
         pick_counter += 1
         if count == 0:
             break
             
         input(f"Press enter to try again: ")
-    
+
     message = f"Picked!" if pick_success else f"Failed to pick"
     print(message)
+    
+    place_pose = pose_in_base.pose
+    place_pose.pose.position.x-=.3
+    result = place_object(pose = place_pose.pose, mesh_path = object_info["mesh_path"])
+    
+    message = f"Placed!" if result else f"Failed to place"
+    print(message)
+
     return
     
     
